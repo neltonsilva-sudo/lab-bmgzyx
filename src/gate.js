@@ -1,7 +1,7 @@
 // Portão de acesso do site público: pede a senha da turma antes de carregar o simulador.
 // Afasta curiosos (o código do site é público, então não é proteção forte). Em localhost não pede senha.
 const SALT = 'labtwin-ket1030';
-const HASH = 'c79b8aeaac8834667f169c0fd1336aa1bbab3c8d3613b2d1d53407561710ec7b';
+const HASH = '204b5c0a3dd641fb3b8bcc8bd04d1bf5103aa08f255a1ba009dab6cbbb98a012';
 const KEY = 'labtwin.acesso';
 
 const sha = async (t) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map((b) => b.toString(16).padStart(2, '0')).join('');
