@@ -404,12 +404,37 @@ export function buildUI(o) {
     g('vrQR').style.display = 'none'; select(null);
     await vr.enter();
   }
-  const loadQR = () => new Promise((res, rej) => { if (window.qrcode) return res(); const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js'; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
+  // sessão professor → celulares (QR code): fechar a página do professor ou clicar em Encerrar bloqueia os celulares
+  let sess = null, sid = null;
+  const ensureSession = async () => { if (sid && sess && !sess.closed) return sid; const m = await import('./session.js'); sid = m.newSessionId(); sess = m.hostSession(sid); return sid; };
+  const inClaudeHost = /claude|anthropic/i.test(location.hostname);
+  function lockPhone(why) {
+    try { if (vr && vr.active) vr.exit(); } catch (e) {}
+    try { sessionStorage.clear(); } catch (e) {}
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 30% 20%,#2a4a7a,#0d1622 70%);font:16px/1.5 system-ui;color:#fff;text-align:center';
+    ov.innerHTML = '<div style="max-width:420px"><div style="font-size:46px">🔒</div><h2 style="margin:8px 0">' + (why === 'old' || why === 'expired' ? 'QR code expirado' : 'Sessão encerrada pelo professor') + '</h2><p style="opacity:.85">' + (why === 'old' || why === 'expired' ? 'Este QR code não é mais válido. Peça ao professor o QR code da aula de hoje.' : 'Para entrar de novo, escaneie um novo QR code e digite a senha de acesso.') + '</p></div>';
+    document.body.appendChild(ov);
+    try { R.setAnimationLoop && R.setAnimationLoop(null); } catch (e) {}
+    setTimeout(() => { try { document.getElementById('c').remove(); } catch (e) {} }, 300);
+  }
+  // QR antigo (sem sessão, encerrado ou expirado) não dá mais acesso
+  if (o.q.get('vr') === '1' && !inClaudeHost) {
+    const s0 = o.q.get('s');
+    if (!s0) lockPhone('old');
+    else import('./session.js').then(async (m) => {
+      const st = await m.checkSession(s0);
+      if (st === 'closed' || st === 'expired') lockPhone(st); else m.watchSession(s0, lockPhone);
+    }).catch(() => {});
+  }
+
+ new Promise((res, rej) => { if (window.qrcode) return res(); const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js'; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
   async function openVRDialog() {
     const box = g('vrQR'), card = box.querySelector('.card');
     // fora do Claude (site próprio ou rede local): o QR aponta para esta mesma página; dentro do Claude: para o site público, se houver
     const inClaude = /claude|anthropic/i.test(location.hostname);
-    const url = !inClaude ? location.origin + location.pathname + '?vr=1&riscos=1' : (PUBLIC_URL ? PUBLIC_URL + '?vr=1&riscos=1' : APP_URL);
+    let url = !inClaude ? location.origin + location.pathname + '?vr=1&riscos=1' : (PUBLIC_URL ? PUBLIC_URL + '?vr=1&riscos=1' : APP_URL);
+    if (!isPhone && url !== APP_URL) { try { url += '&s=' + (await ensureSession()); } catch (e) {} }
     card.innerHTML = `<h3>Modo Óculos VR</h3>
       ${isPhone ? '<p>Você já está no celular. Toque em <b>Entrar no VR</b>, gire o celular na horizontal e encaixe-o no óculos.</p>'
         : `<p>Aponte a câmera do celular para o QR code para abrir o laboratório no celular:</p><div class="qr" id="vrQRimg">gerando…</div><div class="url">${url}</div>`}
@@ -417,9 +442,10 @@ export function buildUI(o) {
       <li>Gire o celular na horizontal e encaixe-o no óculos, com a tela para dentro.</li>
       <li>Olhe em volta mexendo a cabeça. Olhe para um <b>ponto verde</b> no piso por 1,5 s para ir até ele, ou toque na tela (botão do óculos) para andar até onde está olhando.</li></ol>
       <label style="display:flex;align-items:center;gap:8px;margin:4px 0 12px;font-weight:600"><input type="checkbox" id="vrRisk" ${riskOn || isPhone ? 'checked' : ''}> Mostrar o mapa de riscos no ambiente</label>
-      <div class="row"><button class="g" id="vrClose">Fechar</button>${isPhone ? '<button class="g" id="vrMap">Ver sem óculos</button>' : ''}${isPhone ? '<button id="vrGo">Entrar no VR</button>' : '<button class="g" id="vrHere">Testar neste computador</button>'}</div>`;
+      <div class="row"><button class="g" id="vrClose">Fechar</button>${isPhone ? '<button class="g" id="vrMap">Ver sem óculos</button>' : ''}${isPhone ? '<button id="vrGo">Entrar no VR</button>' : '<button class="g" id="vrEnd" style="background:#fde2e0;color:#a3170f">Encerrar sessão dos celulares</button><button class="g" id="vrHere">Testar neste computador</button>'}</div>`;
     box.style.display = 'flex';
     card.querySelector('#vrClose').onclick = () => { box.style.display = 'none'; };
+    const ve = card.querySelector('#vrEnd'); if (ve) ve.onclick = () => { if (sess) sess.close(); sess = null; sid = null; box.style.display = 'none'; toast('Sessão encerrada: os celulares conectados por este QR code foram bloqueados. Um novo QR será gerado na próxima vez.', false, 6000); };
     const rk = card.querySelector('#vrRisk'); rk.onchange = () => setRisk(rk.checked);
     if (isPhone && rk.checked && !riskOn) setRisk(true);
     const vm = card.querySelector('#vrMap'); if (vm) vm.onclick = () => { box.style.display = 'none'; setRisk(true); setCam('geral'); };
