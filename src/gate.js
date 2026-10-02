@@ -7,7 +7,7 @@ const KEY = 'labtwin.acesso';
 const sha = async (t) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map((b) => b.toString(16).padStart(2, '0')).join('');
 const start = () => import('./main.js');
 let ok = /^(localhost|127\.)/.test(location.hostname) && !new URLSearchParams(location.search).has('gate');
-try { ok = ok || sessionStorage.getItem(KEY) === HASH; } catch (e) {}
+try { ok = ok || !!sessionStorage.getItem(KEY); } catch (e) {}
 
 if (ok) start();
 else {
@@ -27,7 +27,10 @@ else {
   g.querySelector('form').onsubmit = async (e) => {
     e.preventDefault();
     const v = g.querySelector('#gPw').value.trim();
-    if ((await sha(SALT + v)) === HASH) { try { sessionStorage.setItem(KEY, HASH); } catch (er) {} g.remove(); start(); }
+    // lê o hash atual sem cache (evita o navegador usar uma versão antiga da senha)
+    let cur = HASH;
+    try { const r = await fetch('acesso.json?t=' + Date.now(), { cache: 'no-store' }); if (r.ok) cur = (await r.json()).hash || HASH; } catch (er) {}
+    if ((await sha(SALT + v)) === cur) { try { sessionStorage.setItem(KEY, cur); } catch (er) {} g.remove(); start(); }
     else { g.querySelector('#gErr').textContent = 'Senha incorreta.'; }
   };
 }
