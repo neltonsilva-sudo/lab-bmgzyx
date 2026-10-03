@@ -10,6 +10,7 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { UpscaleShader } from './render_upscale.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { installBoxProjection, buildEnvironment } from './render_env.js';
 import { PhoneShader } from './render_post.js';
@@ -51,7 +52,33 @@ export function createRenderer(canvas) {
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
 
-  let composer = null, size = new THREE.Vector2(innerWidth, innerHeight), phone, gtao, bloom, lastScene, lastCam;
+  let composer = null, size = new THREE.Vector2(innerWidth, innerHeight), phone, gtao, bloom, up, lastScene, lastCam;
+  // resolução dinâmica: a cena é calculada em escala 'rs' da tela e ampliada com nitidez (render_upscale.js)
+  const QS = new URLSearchParams(location.search);
+  const forced = QS.has('rs') ? Math.min(1, Math.max(0.4, +QS.get('rs') || 1)) : null;
+  const phoneLike = matchMedia('(pointer:coarse)').matches || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+  const RS_MIN = 0.5, RS_MAX = 1.0;
+  let rs = forced ?? (phoneLike ? 0.75 : 1.0);
+  const fps = { n: 0, t: 0, last: performance.now(), next: performance.now() + 2500 };
+  const sharpFor = (r) => 0.18 + (1 - r) * 0.9;
+  function applyScale() {
+    if (!composer) return;
+    composer.setPixelRatio(dpr * rs); composer.setSize(size.x, size.y);
+    const sw = Math.round(size.x * dpr * rs), sh = Math.round(size.y * dpr * rs);
+    phone.uniforms.resolution.value.set(sw, sh);
+    up.uniforms.srcSize.value.set(sw, sh); up.uniforms.sharp.value = sharpFor(rs);
+  }
+  function adapt() {
+    const now = performance.now(), dt = now - fps.last; fps.last = now;
+    if (forced != null || document.hidden || dt > 250) return; // ignora pausas (aba oculta, travadas pontuais)
+    fps.n++; fps.t += dt;
+    if (now < fps.next) return;
+    const avg = 1000 / (fps.t / fps.n); fps.n = 0; fps.t = 0; fps.next = now + 2000;
+    let nr = rs;
+    if (avg < 42) nr = Math.max(RS_MIN, rs - 0.1); else if (avg > 57 && rs < RS_MAX) nr = Math.min(RS_MAX, rs + 0.05);
+    if (Math.abs(nr - rs) > 0.001) { rs = nr; applyScale(); }
+    window.__rs = { scale: +rs.toFixed(2), fps: Math.round(avg) };
+  }
   const clock = new THREE.Clock();
   function build(scene, camera) {
     const w = size.x, h = size.y;
@@ -77,23 +104,27 @@ export function createRenderer(canvas) {
     phone = new ShaderPass(PhoneShader);
     if (!HIGH) phone.uniforms.sharpen.value = 0.2;
     composer.addPass(phone);
-    composer.setSize(w, h);
-    phone.uniforms.resolution.value.set(w * dpr, h * dpr);
+    up = new ShaderPass(UpscaleShader); up.uniforms.srcSize.value = new THREE.Vector2(w * dpr, h * dpr);
+    composer.addPass(up);
     lastScene = scene; lastCam = camera;
+    applyScale();
   }
   const api = {
     renderer,
     get composer() { return composer; },
-    get passes() { return { gtao, bloom, phone }; },
+    get passes() { return { gtao, bloom, phone, up }; },
+    get scale() { return rs; },
+    setScale(v) { rs = Math.min(RS_MAX, Math.max(0.4, v)); applyScale(); },
     resize(w, h) {
       size.set(w, h);
       renderer.setSize(w, h, false);
-      if (composer) { composer.setSize(w, h); phone.uniforms.resolution.value.set(w * dpr, h * dpr); }
+      if (composer) applyScale();
     },
     render(scene, camera) {
       if (!composer || scene !== lastScene || camera !== lastCam) build(scene, camera);
       phone.uniforms.time.value = clock.getElapsedTime();
       composer.render();
+      adapt();
     },
   };
   window.__renderAPI = api;
