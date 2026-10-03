@@ -64,12 +64,22 @@ export function buildUI(o) {
   body.vr #bar,body.vr #ttl,body.vr #tb,body.vr #bAula,body.vr #bVR,body.vr #help,body.vr .hs,body.vr #props,body.vr #tree,body.vr #cubeHit,body.vr #riskLeg{display:none!important}
   #riskLeg{position:fixed;left:140px;bottom:40px;z-index:5;border-radius:8px;padding:8px 12px;display:none;max-width:min(520px,calc(100vw - 170px))}
   @media (max-width:760px){#riskLeg{left:16px;bottom:140px;max-width:calc(100vw - 32px)}}
-  #lBtns{position:fixed;left:16px;top:76px;z-index:6;display:flex;flex-direction:column;gap:8px}
-  #lBtns button{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:9px;font:600 13px "Segoe UI",system-ui,sans-serif;color:#fff;box-shadow:0 4px 14px rgba(10,25,50,.3)}
-  #lBtns button svg{width:18px;height:18px;flex:none}
-  #lBtns #bRisk{background:#2b3b52} #lBtns #bRisk.on{background:#1f5fd1} #lBtns #bRisk:hover{filter:brightness(1.12)}
-  #lBtns #bAPR{background:#c27a00} #lBtns #bAPR.done{background:#1a9c4a} #lBtns #bAPR:hover{filter:brightness(1.1)}
-  #lBtns #bAPR span{line-height:1.15} #bAPR small{font-weight:500;opacity:.9;font-size:11px}
+  #lBtns{position:fixed;left:16px;top:76px;z-index:6;display:flex;flex-direction:column;gap:10px}
+  #lBtns button{all:unset;cursor:pointer;position:relative;display:flex;align-items:center;gap:10px;min-width:150px;padding:12px 16px;border-radius:22px;overflow:hidden;
+    font:600 14px -apple-system,"SF Pro Text","Segoe UI",system-ui,sans-serif;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35);
+    background:linear-gradient(160deg,rgba(255,255,255,.22),rgba(255,255,255,.06) 55%,rgba(255,255,255,.12));
+    -webkit-backdrop-filter:blur(18px) saturate(170%);backdrop-filter:blur(18px) saturate(170%);
+    border:1px solid rgba(255,255,255,.38);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(255,255,255,.12),inset 0 0 18px rgba(255,255,255,.08),0 8px 24px rgba(5,15,35,.28);
+    transition:transform .15s,box-shadow .2s,background .2s}
+  #lBtns button::before{content:'';position:absolute;inset:0 0 auto 0;height:50%;border-radius:22px 22px 40% 40%/22px 22px 14px 14px;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0));pointer-events:none}
+  #lBtns button:hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 0 22px rgba(255,255,255,.14),0 12px 28px rgba(5,15,35,.32)}
+  #lBtns button svg{width:20px;height:20px;flex:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+  #lBtns button span,#lBtns button svg{position:relative}
+  #lBtns #bRisk.on{background:linear-gradient(160deg,rgba(90,150,255,.42),rgba(40,95,210,.22) 60%,rgba(90,150,255,.32));border-color:rgba(170,205,255,.6)}
+  #lBtns #bAPR{background:linear-gradient(160deg,rgba(255,190,80,.38),rgba(230,140,20,.18) 60%,rgba(255,190,80,.28));border-color:rgba(255,215,150,.55)}
+  #lBtns #bAPR.done{background:linear-gradient(160deg,rgba(90,220,140,.38),rgba(26,156,74,.2) 60%,rgba(90,220,140,.28));border-color:rgba(170,240,195,.55)}
+  #lBtns #bAPR span{line-height:1.15} #bAPR small{font-weight:500;opacity:.92;font-size:11.5px}
   #tree{top:190px!important}
   @media (max-width:760px){#lBtns{top:auto;bottom:16px;left:16px}#lBtns button{padding:8px 11px;font-size:12px}}
   body.vr #lBtns{display:none!important}
@@ -104,7 +114,7 @@ export function buildUI(o) {
     $(`<button id="bAula" title="Abrir o painel funcional para a aula prática"><svg viewBox="0 0 24 24">${I.aula}</svg>Aula Prática - Ket 1030</button>`),
     $(`<button id="bVR" title="Ver o laboratório no celular com óculos de realidade virtual"><svg viewBox="0 0 24 24"><path d="M3 8h18v8h-6l-2-3h-2l-2 3H3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="7.5" cy="12" r="1.6" fill="currentColor"/><circle cx="16.5" cy="12" r="1.6" fill="currentColor"/></svg>Modo Óculos VR</button>`),
     $(`<div id="vrQR"><div class="card"></div></div>`),
-    $(`<div id="lBtns"><button id="bRisk" title="Mostrar/ocultar o mapa de riscos no ambiente"><svg viewBox="0 0 24 24">${I.risk}</svg>Mapa de Riscos</button><button id="bAPR" title="Análise Preliminar de Risco — preencher antes das atividades"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 11l2 2 4-4M9 17h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>APR<br><small>preencher antes</small></span></button></div>`),
+    $(`<div id="lBtns"><button id="bRisk" title="Mostrar/ocultar o mapa de riscos no ambiente"><svg viewBox="0 0 24 24">${I.risk}</svg><span>Mapa de Riscos</span></button><button id="bAPR" title="Análise Preliminar de Risco — preencher antes das atividades"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 11l2 2 4-4M9 17h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>APR<br><small>preencher antes</small></span></button></div>`),
     $(`<div id="riskLeg" class="pn"></div>`),
     $(`<div id="meas"></div>`), $(`<div id="toast" class="pn"></div>`), $(`<div id="vwt"></div>`), $(`<div id="cubeHit" title="Cubo de navegação: clique numa face"></div>`),
     $(`<div id="help">Arraste: girar · Botão direito: mover · Roda: zoom · Clique: selecionar</div>`),
