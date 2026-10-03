@@ -80,6 +80,15 @@ export function buildUI(o) {
   #lBtns #bAPR{background:linear-gradient(160deg,rgba(255,190,80,.38),rgba(230,140,20,.18) 60%,rgba(255,190,80,.28));border-color:rgba(255,215,150,.55)}
   #lBtns #bAPR.done{background:linear-gradient(160deg,rgba(90,220,140,.38),rgba(26,156,74,.2) 60%,rgba(90,220,140,.28));border-color:rgba(170,240,195,.55)}
   #lBtns #bAPR span{line-height:1.15} #bAPR small{font-weight:500;opacity:.92;font-size:11.5px}
+  body #bAula,body #bVR{border-radius:22px;overflow:hidden;padding:11px 18px;font:600 14px -apple-system,"SF Pro Text","Segoe UI",system-ui,sans-serif;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35);
+    -webkit-backdrop-filter:blur(18px) saturate(170%);backdrop-filter:blur(18px) saturate(170%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(255,255,255,.12),inset 0 0 18px rgba(255,255,255,.08),0 8px 24px rgba(5,15,35,.28);transition:transform .15s,box-shadow .2s}
+  body #bAula{background:linear-gradient(160deg,rgba(90,220,140,.42),rgba(26,156,74,.24) 60%,rgba(90,220,140,.32));border:1px solid rgba(170,240,195,.6)}
+  body #bVR{top:64px;background:linear-gradient(160deg,rgba(160,130,255,.42),rgba(91,63,209,.24) 60%,rgba(160,130,255,.32));border:1px solid rgba(205,190,255,.6)}
+  body #bAula::before,body #bVR::before{content:'';position:absolute;inset:0 0 auto 0;height:50%;border-radius:22px 22px 40% 40%/22px 22px 14px 14px;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0));pointer-events:none}
+  body #bAula:hover,body #bVR:hover{transform:translateY(-1px);filter:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 0 22px rgba(255,255,255,.14),0 12px 28px rgba(5,15,35,.32)}
+  body #bAula svg,body #bVR svg{filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+  @media (max-width:760px){body #bVR{top:auto}}
   #tree{top:190px!important}
   @media (max-width:760px){#lBtns{top:auto;bottom:16px;left:16px}#lBtns button{padding:8px 11px;font-size:12px}}
   body.vr #lBtns{display:none!important}
