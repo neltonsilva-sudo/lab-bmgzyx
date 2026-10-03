@@ -64,6 +64,15 @@ export function buildUI(o) {
   body.vr #bar,body.vr #ttl,body.vr #tb,body.vr #bAula,body.vr #bVR,body.vr #help,body.vr .hs,body.vr #props,body.vr #tree,body.vr #cubeHit,body.vr #riskLeg{display:none!important}
   #riskLeg{position:fixed;left:140px;bottom:40px;z-index:5;border-radius:8px;padding:8px 12px;display:none;max-width:min(520px,calc(100vw - 170px))}
   @media (max-width:760px){#riskLeg{left:16px;bottom:140px;max-width:calc(100vw - 32px)}}
+  #lBtns{position:fixed;left:16px;top:76px;z-index:6;display:flex;flex-direction:column;gap:8px}
+  #lBtns button{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:9px;font:600 13px "Segoe UI",system-ui,sans-serif;color:#fff;box-shadow:0 4px 14px rgba(10,25,50,.3)}
+  #lBtns button svg{width:18px;height:18px;flex:none}
+  #lBtns #bRisk{background:#2b3b52} #lBtns #bRisk.on{background:#1f5fd1} #lBtns #bRisk:hover{filter:brightness(1.12)}
+  #lBtns #bAPR{background:#c27a00} #lBtns #bAPR.done{background:#1a9c4a} #lBtns #bAPR:hover{filter:brightness(1.1)}
+  #lBtns #bAPR span{line-height:1.15} #bAPR small{font-weight:500;opacity:.9;font-size:11px}
+  #tree{top:190px!important}
+  @media (max-width:760px){#lBtns{top:auto;bottom:16px;left:16px}#lBtns button{padding:8px 11px;font-size:12px}}
+  body.vr #lBtns{display:none!important}
   body.multi #ttl{display:none} body.multi #tb{top:32px} body.multi #tree{top:84px}
   @media (max-width:760px){#ttl{display:none}#tb{top:8px}#tree{top:auto;bottom:140px}#help{display:none}#cmp .row{flex-direction:column}}`;
   document.head.appendChild(css);
@@ -95,6 +104,7 @@ export function buildUI(o) {
     $(`<button id="bAula" title="Abrir o painel funcional para a aula prática"><svg viewBox="0 0 24 24">${I.aula}</svg>Aula Prática - Ket 1030</button>`),
     $(`<button id="bVR" title="Ver o laboratório no celular com óculos de realidade virtual"><svg viewBox="0 0 24 24"><path d="M3 8h18v8h-6l-2-3h-2l-2 3H3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="7.5" cy="12" r="1.6" fill="currentColor"/><circle cx="16.5" cy="12" r="1.6" fill="currentColor"/></svg>Modo Óculos VR</button>`),
     $(`<div id="vrQR"><div class="card"></div></div>`),
+    $(`<div id="lBtns"><button id="bRisk" title="Mostrar/ocultar o mapa de riscos no ambiente"><svg viewBox="0 0 24 24">${I.risk}</svg>Mapa de Riscos</button><button id="bAPR" title="Análise Preliminar de Risco — preencher antes das atividades"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 11l2 2 4-4M9 17h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>APR<br><small>preencher antes</small></span></button></div>`),
     $(`<div id="riskLeg" class="pn"></div>`),
     $(`<div id="meas"></div>`), $(`<div id="toast" class="pn"></div>`), $(`<div id="vwt"></div>`), $(`<div id="cubeHit" title="Cubo de navegação: clique numa face"></div>`),
     $(`<div id="help">Arraste: girar · Botão direito: mover · Roda: zoom · Clique: selecionar</div>`),
@@ -155,6 +165,7 @@ export function buildUI(o) {
     g('props').style.display = 'block';
   }
   async function openLesson(id) {
+    { const a = await getAPR(); if (!a.doneToday()) { toast('Antes da aula prática, preencha a APR (Análise Preliminar de Risco).', true, 5000); a.open(() => { markAPR(); openLesson(id); }); return; } }
     if (!lesson) {
       let mod;
       try { mod = await import('./lesson.js'); } catch (e) { console.error(e); toast('Não foi possível abrir a aula prática agora (módulo em atualização). Tente de novo em instantes.', true, 6000); return; }
@@ -386,10 +397,18 @@ export function buildUI(o) {
   let risk = null, riskOn = false;
   async function setRisk(on) {
     if (on && !risk) { const m = await import('./riskmap.js'); risk = m.buildRiskMap({ THREE, L, scene }); g('riskLeg').innerHTML = risk.legendHTML(); }
-    riskOn = on; if (risk) risk.setVisible(on); setOn('tRisk', on); g('riskLeg').style.display = on ? 'block' : 'none';
+    riskOn = on; if (risk) risk.setVisible(on); setOn('tRisk', on); g('bRisk').classList.toggle('on', on); g('riskLeg').style.display = on ? 'block' : 'none';
     try { localStorage.setItem('labtwin.riscos', on ? '1' : '0'); } catch (e) {}
   }
-  g('tRisk').onclick = () => setRisk(!riskOn);
+  g('tRisk').onclick = g('bRisk').onclick = () => setRisk(!riskOn);
+
+  // ---------- APR (Análise Preliminar de Risco) ----------
+  let apr = null;
+  const getAPR = async () => { if (!apr) { const [a, r] = await Promise.all([import('./apr.js'), import('./riskmap.js')]); apr = a.buildAPR({ toast, riskAreas: r.riskAreas(L) }); } return apr; };
+  const markAPR = () => { const a = apr && apr.last(); g('bAPR').classList.toggle('done', !!a); g('bAPR').querySelector('small').textContent = a ? 'preenchida ✓' : 'preencher antes'; };
+  g('bAPR').onclick = async () => { (await getAPR()).open(markAPR); };
+  getAPR().then(markAPR).catch(() => {});
+  if (o.q.get('apr') === '1') setTimeout(() => g('bAPR').click(), 1500);
   { let saved = null; try { saved = localStorage.getItem('labtwin.riscos'); } catch (e) {}
     if (o.q.get('riscos') === '1' || saved === '1') setRisk(true); }
 
