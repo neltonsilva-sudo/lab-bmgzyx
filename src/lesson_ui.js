@@ -241,6 +241,16 @@ export function createLessonScreen(opts = {}) {
         <text x="${ew / 2}" y="18" text-anchor="middle" font-size="9.5" font-weight="800" fill="#f2c514" font-family="Arial">ACESSÓRIO EXTERNO</text><text x="${ew / 2}" y="30" text-anchor="middle" font-size="7" fill="#ddd" font-family="Arial">não faz parte do KET-1030</text>
         <circle cx="80" cy="88" r="40" fill="#f2c514"/><text x="80" y="140" text-anchor="middle" font-size="7.5" font-weight="800" fill="#f2c514" font-family="Arial">EMERGÊNCIA</text>
         <g transform="translate(80,88)"><circle r="20" fill="#333"/><g class="cap"><circle r="27" fill="#c81616" filter="url(#fSh)"/><ellipse cx="-8" cy="-10" rx="11" ry="6" fill="#fff" opacity=".3"/></g></g><text class="lt" x="150" y="136" font-size="8" font-weight="800" fill="#ff6b5a" font-family="Arial"></text>`;
+    } else if (w.type === 'motorMount') {
+      const fins = Array.from({ length: 9 }, (_, i) => `<rect x="${-62 + i * 13}" y="-46" width="5" height="92" rx="2" fill="#4c5a68"/>`).join('');
+      const sect = Array.from({ length: 6 }, (_, i) => `<path d="M0 0 L${(20 * Math.cos(i * Math.PI / 3)).toFixed(2)} ${(20 * Math.sin(i * Math.PI / 3)).toFixed(2)} A20 20 0 0 1 ${(20 * Math.cos((i + 0.5) * Math.PI / 3)).toFixed(2)} ${(20 * Math.sin((i + 0.5) * Math.PI / 3)).toFixed(2)} Z" fill="${i % 2 ? '#d9dde1' : '#e8b714'}"/>`).join('');
+      g.innerHTML = `<g filter="url(#fSh)"><rect x="-70" y="-40" width="140" height="80" rx="16" fill="#5f6f7e"/>${fins}<rect x="-70" y="-40" width="140" height="80" rx="16" fill="none" stroke="#2f3a44" stroke-width="2"/>
+        <rect x="64" y="-34" width="26" height="68" rx="10" fill="#3d4954"/><circle cx="77" cy="0" r="22" fill="#2a333b"/>${Array.from({ length: 8 }, (_, i) => `<rect x="${71 + (i % 2) * 6}" y="${-16 + Math.floor(i / 2) * 9}" width="4" height="6" fill="#121619"/>`).join('')}
+        <rect x="-22" y="-62" width="46" height="24" rx="4" fill="#53626f" stroke="#2f3a44" stroke-width="1.5"/><text x="1" y="-46" text-anchor="middle" font-size="7" font-weight="700" fill="#e8ecef" font-family="Arial">M1 3~</text>
+        <rect x="-50" y="16" width="44" height="18" rx="2" fill="#dfe3e6" stroke="#9aa3ab"/><text x="-28" y="24" text-anchor="middle" font-size="4.6" font-weight="700" fill="#1e2a3a" font-family="Arial">0,5 cv · 1720 rpm</text><text x="-28" y="31" text-anchor="middle" font-size="4.2" fill="#1e2a3a" font-family="Arial">380 Δ / 660 Y V · 1,05 A</text>
+        <rect x="-86" y="-5" width="18" height="10" fill="#b9c0c6"/></g>
+        <g transform="translate(-81,0)"><circle r="23" fill="#333"/><g class="rot">${sect}<circle r="4" fill="#555"/></g><circle class="blur" r="20" fill="#cfcfcf" opacity="0"/></g>
+        <text class="rpm" x="0" y="58" text-anchor="middle" font-size="9" font-weight="800" fill="#1e2a3a" font-family="Arial">parado</text>`;
     } else if (w.type === 'motorArea') {
       g.innerHTML = `<rect class="glow" x="${-w.w / 2}" y="${-w.h / 2}" width="${w.w}" height="${w.h}" rx="8" fill="#ff9a1f" opacity="0"/>`;
       g.style.pointerEvents = 'none';
@@ -809,6 +819,13 @@ export function createLessonScreen(opts = {}) {
         ['R', 'S', 'T'].forEach((p) => g.querySelector('.gv' + p).textContent = live && G.loss !== p ? String(G.V) : '0');
         g.querySelector('.gst').textContent = G.fault ? 'FALHA SAÍDA' : live ? `${G.seq > 0 ? 'RST' : 'RTS'} ${G.V}V${G.loss ? ' -' + G.loss : ''}` : 'DESLIGADO';
         g.querySelector('.gled').setAttribute('fill', live ? '#ff3b28' : '#3a2a2a');
+      } else if (w.type === 'motorMount') {
+        const m = sim.dev(R.M).st, rpm = m.rpm || 0, now = performance.now(), dt = Math.min(0.1, (now - (g._t || now)) / 1000); g._t = now;
+        // giro visível: até ~2 voltas/s no desenho; acima disso o disco borra (efeito estroboscópico evitado)
+        g._a = ((g._a || 0) + Math.sign(rpm) * Math.min(Math.abs(rpm) / 60, 2.2) * 360 * dt) % 360;
+        g.querySelector('.rot').setAttribute('transform', `rotate(${g._a.toFixed(1)})`);
+        g.querySelector('.blur').setAttribute('opacity', Math.min(0.75, Math.abs(rpm) / 1736 * 0.75).toFixed(2));
+        g.querySelector('.rpm').textContent = Math.abs(rpm) < 5 ? 'parado' : `${Math.round(Math.abs(rpm))} rpm ${rpm > 0 ? '↻' : '↺'}`;
       } else if (w.type === 'motorArea') { const m = sim.dev(R.M).st; const v = m.Vw ? Math.max(...m.Vw) : 0; g.querySelector('.glow').setAttribute('opacity', Math.min(0.32, v / 380 * 0.32)); }
     }
     if (dlgDiag) {

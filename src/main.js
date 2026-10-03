@@ -9,6 +9,7 @@ import { buildBenches } from './benches.js';
 import { buildCenter } from './center.js';
 import { buildProps } from './props.js';
 import { buildUI } from './ui.js';
+import { buildMotor3D } from './motor3d.js';
 
 const Q = new URLSearchParams(location.search);
 const canvas = document.getElementById('c');
@@ -22,6 +23,8 @@ ctx.parts = parts;
 for (const [k, fn] of Object.entries({ room: buildRoom, booths: buildBooths, benches: buildBenches, center: buildCenter, props: buildProps, light: buildLighting })) {
   try { parts[k] = fn(scene, ctx) || {}; } catch (e) { console.error('falha ao montar', k, e); parts[k] = {}; }
 }
+
+try { const m = buildMotor3D(ctx); if (m) parts.motor = { group: m.group, update: m.update, hotspots: [m.hotspot] }; } catch (e) { console.error('motor M1', e); }
 
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true; controls.dampingFactor = 0.08;
@@ -69,7 +72,7 @@ function setWalk(on) {
   } else { controls.minDistance = 0.3; controls.maxDistance = 30; controls.enablePan = true; controls.rotateSpeed = 1; }
 }
 
-const hotspots = [parts.benches, parts.booths, parts.center, parts.props, parts.room].flatMap((p) => p.hotspots || []);
+const hotspots = [parts.benches, parts.motor || {}, parts.booths, parts.center, parts.props, parts.room].flatMap((p) => p.hotspots || []);
 const ui = Q.get('ui') === '0' ? null : buildUI({ THREE, L, camera, controls, canvas, scene, hotspots, setCam, setWalk, cams: Object.keys(L.CAMS), q: Q, render: R, parts });
 
 function resize() { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); R.resize(innerWidth, innerHeight); }

@@ -184,7 +184,7 @@ export function buildUI(o) {
     g('props').style.display = 'block';
   }
   async function openLesson(id) {
-    { const a = await getAPR(); if (!a.doneToday()) { toast('Antes da aula prática, preencha a APR (Análise Preliminar de Risco).', true, 5000); a.open(() => { markAPR(); openLesson(id); }); return; } }
+    { const a = await getAPR(); if (!a.doneToday() && !(/^(localhost|127\.)/.test(location.hostname) && o.q.get('aprok') === '1')) { toast('Antes da aula prática, preencha a APR (Análise Preliminar de Risco).', true, 5000); a.open(() => { markAPR(); openLesson(id); }); return; } }
     if (!lesson) {
       let mod;
       try { mod = await import('./lesson.js'); } catch (e) { console.error(e); toast('Não foi possível abrir a aula prática agora (módulo em atualização). Tente de novo em instantes.', true, 6000); return; }

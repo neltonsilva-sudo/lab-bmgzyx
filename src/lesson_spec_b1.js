@@ -188,6 +188,8 @@ export function buildPanelB1(B, ppm = 2000) {
   L('SENSOR INDUTIVO', 1075, 52, 6.6);
   [['GND', 81, 101], ['+12Vcc', 135, 154], ['OUT', 187, 207]].forEach(([t, y, yl]) => { L(t, 1075, yl, 6.2, { weight: 600 }); B.term(1072, y, 'SNS.' + t, `Sensor indutivo PNP · ${t} (não simulado)`, 'K', null, 0.6); });
   P.circle(1181, 137, 12.5, 'rgba(255,255,255,0.6)'); P.circle(1181, 137, 11, '#0b0b0b');
+  // motor M1 montado no furo do painel (eixo + disco no furo, carcaça à direita) — gira com o simulador
+  B.w({ type: 'motorMount', x: 1262, y: 137, tip: 'Motor M1 — indução trifásico, 6 pontas (U1-V2-W3 / X4-Y5-Z6), 0,5 cv (0,37 kW), 4 polos, 380 V Δ / 660 V Y, 1,05 A em 380 V, 1720 rpm, 60 Hz, IP55. Ligue em triângulo (Δ) na rede de 380 V; em estrela (Y) parte com 1/3 da corrente.' });
   for (const [x, y] of [[1121, 76], [1239, 75], [1333, 135], [1118, 196], [1237, 195], [1140, 160], [1100, 172]]) { P.circle(x, y, 3.6, 'rgba(255,255,255,0.5)'); P.circle(x, y, 2.6, '#222'); }
 
   // ===== contatores K1–K5 =====
