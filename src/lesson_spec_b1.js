@@ -141,7 +141,7 @@ export function buildPanelB1(B, ppm = 2000) {
   L('DESL', 72, 228, 7); L('CH2', 29, 259, 5.8);
   B.dev('CH2', 'pbNC', 'CH2 · DESLIGA'); B.w({ type: 'btn', dev: 'CH2', x: 67, y: 261, c: 'R', r: 1.3, tip: 'Botão DESLIGA (CH2) — contato NF, retorno por mola' });
   B.term(110, 245, 'CH2.11', 'CH2 DESL · contato NF (borne 1)'); B.term(110, 272, 'CH2.12', 'CH2 DESL · contato NF (borne 2)');
-  tape(P, 130, 150, 30, 54, 0.04); tape(P, 132, 229, 26, 50, -0.06);
+  // fitas crepe removidas a pedido
   L('SN1', 20, 331, 5.8); L('(220Vca)', 20, 343, 5.2);
   B.dev('SN1', 'lamp', 'SN1 · sinaleiro amarelo'); B.w({ type: 'lamp', x: 66, y: 340, c: 'Y', s: 1.3, dev: 'SN1', tip: 'Sinaleiro SN1 amarelo 220 Vca (bornes X1-X2)' });
   B.term(111, 325, 'SN1.X1', 'Sinaleiro SN1 · X1'); B.term(111, 352, 'SN1.X2', 'Sinaleiro SN1 · X2');

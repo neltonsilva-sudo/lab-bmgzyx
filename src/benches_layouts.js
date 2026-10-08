@@ -21,7 +21,7 @@ function b1(A) {
   g.save(); g.fillStyle = 'rgba(255,255,248,0.55)'; g.fillRect(P.X(X(116)), P.Y(Y(440)), P.S(X(360) - X(116)), P.S(Y(440) - Y(469))); g.restore();
   P.text('KET-1030: Proteção', X(123), Y(455), 0.046, { align: 'left', weight: 600, color: '#242424', w: X(353) - X(123), font: '"DIN Condensed","Arial Narrow",Arial,sans-serif' });
   // fitas crepe (marcas de uso)
-  for (const [x, y, w, h, a] of [[136, 560, 22, 38, 0.05], [141, 616, 20, 32, -0.06]]) {
+  for (const [x, y, w, h, a] of []) { // removidas a pedido
     g.save(); g.translate(P.X(X(x)), P.Y(Y(y))); g.rotate(a); g.fillStyle = 'rgba(214,196,160,0.85)'; g.fillRect(-P.S(w * 0.00186) / 2, -P.S(h * 0.0016) / 2, P.S(w * 0.00186), P.S(h * 0.0016)); g.restore();
   }
   // coluna de comando

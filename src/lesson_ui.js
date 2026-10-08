@@ -820,11 +820,7 @@ export function createLessonScreen(opts = {}) {
         g.querySelector('.gst').textContent = G.fault ? 'FALHA SAÍDA' : live ? `${G.seq > 0 ? 'RST' : 'RTS'} ${G.V}V${G.loss ? ' -' + G.loss : ''}` : 'DESLIGADO';
         g.querySelector('.gled').setAttribute('fill', live ? '#ff3b28' : '#3a2a2a');
       } else if (w.type === 'motorMount') {
-        const m = sim.dev(R.M).st, rpm = m.rpm || 0, now = performance.now(), dt = Math.min(0.1, (now - (g._t || now)) / 1000); g._t = now;
-        // giro visível: até ~2 voltas/s no desenho; acima disso o disco borra (efeito estroboscópico evitado)
-        g._a = ((g._a || 0) + Math.sign(rpm) * Math.min(Math.abs(rpm) / 60, 2.2) * 360 * dt) % 360;
-        g.querySelector('.rot').setAttribute('transform', `rotate(${g._a.toFixed(1)})`);
-        g.querySelector('.blur').setAttribute('opacity', Math.min(0.75, Math.abs(rpm) / 1736 * 0.75).toFixed(2));
+        const rpm = sim.dev(R.M).st.rpm || 0;
         g.querySelector('.rpm').textContent = Math.abs(rpm) < 5 ? 'parado' : `${Math.round(Math.abs(rpm))} rpm ${rpm > 0 ? '↻' : '↺'}`;
       } else if (w.type === 'motorArea') { const m = sim.dev(R.M).st; const v = m.Vw ? Math.max(...m.Vw) : 0; g.querySelector('.glow').setAttribute('opacity', Math.min(0.32, v / 380 * 0.32)); }
     }
@@ -921,6 +917,17 @@ export function createLessonScreen(opts = {}) {
 
   // ---------- ciclo ----------
   let acc = 0, uiAcc = 0, last = 0;
+  // ventoinha do motor M1: gira a cada quadro (velocidade visível, sem efeito estroboscópico)
+  let fanA = 0, fanV = 0;
+  function spinFan(dt) {
+    const wm = W.find((w) => w.type === 'motorMount'); if (!wm) return;
+    const rpm = sim.dev(R.M).st.rpm || 0;
+    const target = Math.sign(rpm) * Math.min(Math.abs(rpm) / 1736, 1) * 1.6 * 360; // até 1,6 volta/s no desenho
+    fanV += (target - fanV) * Math.min(1, dt * 3);                                 // acelera e desacelera suave
+    fanA = (fanA + fanV * dt) % 360;
+    wm.g.querySelector('.rot').setAttribute('transform', `rotate(${fanA.toFixed(1)})`);
+    wm.g.querySelector('.blur').setAttribute('opacity', (Math.min(1, Math.abs(fanV) / 576) * 0.3).toFixed(2));
+  }
   function update(dt) {
     if (!root.classList.contains('on')) return;
     dt = Math.min(dt, 0.1);
@@ -928,7 +935,7 @@ export function createLessonScreen(opts = {}) {
     acc += dt;
     while (acc >= 0.02) { sim.step(0.02); acc -= 0.02; }
     if (X.meter.test > 0) X.meter.test -= dt;
-    pumpEvents(); watchTest(); updateMotor(dt);
+    pumpEvents(); watchTest(); updateMotor(dt); spinFan(dt);
     uiAcc += dt; if (uiAcc > 0.06) { uiAcc = 0; updateWidgets(); updateCards(); }
   }
   // laço próprio quando o orquestrador não chama update (tela aberta e 3D pausado)
@@ -944,6 +951,7 @@ export function createLessonScreen(opts = {}) {
   Object.assign(window.__lesson, {
     wireT(a, b, color = 'R') { const A = jackOfTerm(a), B = jackOfTerm(b); if (!A || !B) throw new Error('borne inexistente ' + (!A ? a : b)); doAdd(A.id, B.id); },
     setColor(c) { X.color = c; }, check: () => runCheck(true), nrAction, setMain, openEnergize, openReport, openDiagrams, setTab, reportText, startScript(id, name = 'Teste') { X.student = name; X.script = scriptById(id); X.started = true; X.t0 = performance.now(); closeDialog(); renderAll(); },
+    tick: (dt) => update(dt),
     probe(a, b) { X.meter.test = 0; X.meter.red = jackOfTerm(a).id; X.meter.black = jackOfTerm(b).id; drawProbes(); return meterRead(); }, press: (id, v) => sim.press(id, v), dialog, closeDialog, zoomAt, say, testMeter: () => $('#lzTest').click(),
   });
   return { open, close, isOpen: () => root.classList.contains('on'), update: (dt) => { lastCall = performance.now(); update(dt); } };

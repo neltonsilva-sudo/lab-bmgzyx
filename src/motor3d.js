@@ -66,7 +66,7 @@ export function buildMotor3D(ctx) {
   }
   const contactorsOn = () => Ks.filter((k) => k.on).map((k) => k.id);
 
-  let ang = 0;
+  let ang = 0, spd = 0;
   function update(dt) {
     const L = window.__lesson, sim = L && L.sim;
     let rpm = 0;
@@ -83,9 +83,10 @@ export function buildMotor3D(ctx) {
       k.arm.position.z = -0.0045 * k.t;
       k.win.material.color.setHex(k.on ? 0x22d35a : 0x2a2f33);
     }
-    ang += Math.sign(rpm) * Math.min(Math.abs(rpm) / 60, 2.5) * Math.PI * 2 * dt;
+    spd += (Math.sign(rpm) * Math.min(Math.abs(rpm) / 1736, 1) * 1.6 * Math.PI * 2 - spd) * Math.min(1, dt * 3);
+    ang += spd * dt;
     rot.rotation.x = ang;
-    blur.material.opacity = Math.min(0.8, (Math.abs(rpm) / 1736) * 0.8);
+    blur.material.opacity = Math.min(1, Math.abs(spd) / 10) * 0.3;
     housing.position.y = Math.abs(rpm) > 50 ? (Math.random() - 0.5) * 0.0004 : 0; // leve vibração ligado
   }
   return { group: root, update, contactorsOn, hotspot: { id: 'm1', titulo: 'Motor M1 · KET-1030', obj: root,
