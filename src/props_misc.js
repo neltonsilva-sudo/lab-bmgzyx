@@ -1,8 +1,8 @@
 // DONO: agente "acessórios". Extintor com suporte de piso, mesa lateral branca, bancada escura com caixas de ferramentas,
 // armário/painel elétrico cinza-claro com porta, visor, dobradiças e estrutura tubular lateral.
 import * as THREE from 'three';
-import { merge, box, cyl, tube, RoundedBoxGeometry } from './props_util.js?v=20261008191523';
-import { extLabel, powderMaps, tabletopMaps, noiseTex, shockSticker, grimeMap } from './props_tex.js?v=20261008191523';
+import { merge, box, cyl, tube, RoundedBoxGeometry } from './props_util.js?v=20261008192305';
+import { extLabel, powderMaps, tabletopMaps, noiseTex, shockSticker, grimeMap } from './props_tex.js?v=20261008192305';
 
 // ─────────────────────────── Extintor PQS 6 kg em suporte de piso
 export function buildExtinguisher() {

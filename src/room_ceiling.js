@@ -2,8 +2,8 @@
 // eletrodutos com braçadeiras, tirantes, grelha de ventilação e luminária quadrada âmbar.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { ROOM, BOOTHS, SOLAR, BENCH_ROW } from './layout.js?v=20261008191523';
-import { ceilingTextures, perforatedAlpha, galvTexture } from './room_tex.js?v=20261008191523';
+import { ROOM, BOOTHS, SOLAR, BENCH_ROW } from './layout.js?v=20261008192305';
+import { ceilingTextures, perforatedAlpha, galvTexture } from './room_tex.js?v=20261008192305';
 
 const box = (w, h, d, x, y, z) => { const g = new THREE.BoxGeometry(w, h, d); g.translate(x, y, z); return g; };
 const cyl = (r, len, axis, x, y, z, seg = 10) => {

@@ -1,8 +1,8 @@
 // DONO: agente "acessórios". Pedestais sinalizadores (poste listrado preto/amarelo, base cônica preta, topo com ganchos)
 // e correntes plásticas amarelas/pretas em catenária, instanciadas.
 import * as THREE from 'three';
-import { merge, cyl } from './props_util.js?v=20261008191523';
-import { stanchionStripeMap, noiseTex } from './props_tex.js?v=20261008191523';
+import { merge, cyl } from './props_util.js?v=20261008192305';
+import { stanchionStripeMap, noiseTex } from './props_tex.js?v=20261008192305';
 
 const POLE_H = 0.93, POLE_R = 0.029, HOOK_Y = 0.875;
 

@@ -1,7 +1,7 @@
 // DONO: agente "acessórios". Cadeira fixa de escritório preta (assento/encosto estofados, estrutura tubular em trapézio, sapatas).
 import * as THREE from 'three';
-import { tube, merge, cyl, RoundedBoxGeometry } from './props_util.js?v=20261008191523';
-import { fabricMaps, noiseTex } from './props_tex.js?v=20261008191523';
+import { tube, merge, cyl, RoundedBoxGeometry } from './props_util.js?v=20261008192305';
+import { fabricMaps, noiseTex } from './props_tex.js?v=20261008192305';
 
 let GEO = null, MAT = null;
 

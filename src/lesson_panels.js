@@ -1,6 +1,6 @@
 // DONO: agente "aula-pratica". Monta o painel interativo do KET-1030 (face própria em mm, lesson_spec_b1.js) e o mapa
 // elétrico: cada borne banana → borne de um dispositivo do simulador (lesson_sim.js). Não depende dos módulos 3D.
-import { buildPanelB1 } from './lesson_spec_b1.js?v=20261008191523';
+import { buildPanelB1 } from './lesson_spec_b1.js?v=20261008192305';
 
 export const JACK_COL = { K: '#1b1b1b', R: '#c8201c', W: '#ecebe4', B: '#1d55c9', Y: '#e9bf14', G: '#1f9a3c' };
 
@@ -14,7 +14,9 @@ function makeBuilder() {
 }
 
 let cache = null;
-export function getPanel(ppm = 2000) {
+// resolução da face: ~4 px/mm em computador (nítido com zoom e telas retina), ~2,8 px/mm em celular
+const PPM = (() => { const mob = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent); return mob ? 2800 : Math.min(4200, Math.max(3000, 2000 * (window.devicePixelRatio || 1) * 1.5)); })();
+export function getPanel(ppm = PPM) {
   if (cache) return cache;
   const B = makeBuilder();
   const extra = buildPanelB1(B, ppm);

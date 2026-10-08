@@ -1,15 +1,15 @@
 // DONO: orquestrador. Câmera, controles (órbita / caminhar), vistas das fotos, pontos de interesse, comparação cega.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import * as L from './layout.js?v=20261008191523';
-import { createRenderer, buildLighting } from './render.js?v=20261008191523';
-import { buildRoom } from './room.js?v=20261008191523';
-import { buildBooths } from './booths.js?v=20261008191523';
-import { buildBenches } from './benches.js?v=20261008191523';
-import { buildCenter } from './center.js?v=20261008191523';
-import { buildProps } from './props.js?v=20261008191523';
-import { buildUI } from './ui.js?v=20261008191523';
-import { buildMotor3D } from './motor3d.js?v=20261008191523';
+import * as L from './layout.js?v=20261008192305';
+import { createRenderer, buildLighting } from './render.js?v=20261008192305';
+import { buildRoom } from './room.js?v=20261008192305';
+import { buildBooths } from './booths.js?v=20261008192305';
+import { buildBenches } from './benches.js?v=20261008192305';
+import { buildCenter } from './center.js?v=20261008192305';
+import { buildProps } from './props.js?v=20261008192305';
+import { buildUI } from './ui.js?v=20261008192305';
+import { buildMotor3D } from './motor3d.js?v=20261008192305';
 
 const Q = new URLSearchParams(location.search);
 const canvas = document.getElementById('c');

@@ -1,7 +1,7 @@
 // DONO: agente "centro-solar". Módulos fotovoltaicos de 144 meias-células (6 x 24) em carrinhos metálicos com rodízios.
 import * as THREE from 'three';
-import { Batch, mtx, bar, caster } from './center_lib.js?v=20261008191523';
-import { solarTex, glassRough } from './center_tex.js?v=20261008191523';
+import { Batch, mtx, bar, caster } from './center_lib.js?v=20261008192305';
+import { solarTex, glassRough } from './center_tex.js?v=20261008192305';
 
 export function buildSolar(M, SOLAR, env, q) {
   const g = new THREE.Group(); g.name = 'paineis-fv';
