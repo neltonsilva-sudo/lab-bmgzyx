@@ -1,8 +1,8 @@
 // DONO: agente "aula-pratica". Segunda tela (tela cheia) com o painel KET-1030 funcional: cabos de teste, botoeiras,
 // medidores, multímetro, procedimento NR-10, roteiros com verificação automática, defeitos e relatório.
-import { createSim, fmtA } from './lesson_sim.js?v=20261008192305';
-import { getPanel, JACK_COL } from './lesson_panels.js?v=20261008192305';
-import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261008192305';
+import { createSim, fmtA } from './lesson_sim.js?v=20261008201615';
+import { getPanel, JACK_COL } from './lesson_panels.js?v=20261008201615';
+import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261008201615';
 
 const CABLE = { R: ['#d11f1f', '#7a0d0d', 'vermelho'], K: ['#202020', '#000', 'preto'], B: ['#1f56c9', '#0d2a6e', 'azul'], Y: ['#f0c419', '#8a6d05', 'amarelo'], W: ['#f2f2ee', '#8d8d86', 'branco'], G: ['#1f9a3c', '#0b4a1a', 'verde'] };
 const NS = 'http://www.w3.org/2000/svg';
@@ -160,6 +160,14 @@ export function createLessonScreen(opts = {}) {
   stage.style.width = VW + 'px'; stage.style.height = VH + 'px';
   Object.assign(panel.canvas.style, { position: 'absolute', left: -VX + 'px', top: -VY + 'px', width: FW + 'px', height: FH + 'px' });
   stage.appendChild(panel.canvas);
+  // brilho do laminado que acompanha o ponteiro (reflexo da luz do teto), sem capturar cliques
+  const sheen = document.createElement('div');
+  Object.assign(sheen.style, { position: 'absolute', left: -VX + 'px', top: -VY + 'px', width: FW + 'px', height: FH + 'px', pointerEvents: 'none', mixBlendMode: 'soft-light', zIndex: 1,
+    background: 'radial-gradient(520px 340px at 45% 18%, rgba(255,255,255,.55), rgba(255,255,255,0) 70%)', transition: 'background-position .2s' });
+  stage.appendChild(sheen);
+  wrap.addEventListener('pointermove', (e) => { const r = panel.canvas.getBoundingClientRect(); if (!r.width) return;
+    const px = ((e.clientX - r.left) / r.width) * 100, py = ((e.clientY - r.top) / r.height) * 100;
+    sheen.style.background = `radial-gradient(520px 340px at ${(100 - px * 0.6).toFixed(1)}% ${(8 + py * 0.25).toFixed(1)}%, rgba(255,255,255,.55), rgba(255,255,255,0) 70%)`; });
   const svg = el('svg', { class: 'pnl', viewBox: `${VX} ${VY} ${VW} ${VH}`, width: VW, height: VH }, stage);
   svg.style.width = VW + 'px'; svg.style.height = VH + 'px';
   const defs = el('defs', {}, svg);
@@ -169,6 +177,10 @@ export function createLessonScreen(opts = {}) {
     <linearGradient id="gBench" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d6d9dc"/><stop offset="1" stop-color="#b9bdc1"/></linearGradient>
     <filter id="fGlow" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="6"/></filter>
     <radialGradient id="lzPlugSh" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
+    <radialGradient id="gNut" cx="35%" cy="30%"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#c3c6ca"/><stop offset="1" stop-color="#6f7378"/></radialGradient>
+    <radialGradient id="gCone" cx="40%" cy="35%" r="65%"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
+    <radialGradient id="gHole" cx="62%" cy="66%" r="70%"><stop offset="0" stop-color="#3a3c3f"/><stop offset=".6" stop-color="#101112"/><stop offset="1" stop-color="#000"/></radialGradient>
+    <filter id="fJs" x="-.5" y="-.5" width="2" height="2"><feGaussianBlur stdDeviation="1.6"/></filter>
     <filter id="fSh" x="-.3" y="-.3" width="1.6" height="1.6"><feDropShadow dx="1.5" dy="3" stdDeviation="2" flood-opacity=".45"/></filter>
     ${Object.entries(JACK_COL).map(([k, c]) => `<radialGradient id="gJ${k}" cx="38%" cy="32%"><stop offset="0" stop-color="${k === 'K' ? '#5a5a5a' : '#fff'}" stop-opacity="${k === 'K' ? 1 : 0.55}"/><stop offset=".45" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity=".85"/></radialGradient>`).join('')}`;
   // bancada abaixo do painel (chapa perfurada), moldura do painel
@@ -180,6 +192,11 @@ export function createLessonScreen(opts = {}) {
     <rect x="-1" y="-1" width="${FW + 2}" height="${FH + 2}" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="2"/>
     <circle cx="-22" cy="-22" r="12" fill="#cfe3f7" stroke="#9bb"/><text x="-22" y="-20" text-anchor="middle" font-size="4.5" fill="#557">ACION.</text>` +
     [[-20, FH + 20], [FW + 20, -20], [FW + 20, FH + 20], [FW / 2, -20], [FW / 2, FH + 20]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="url(#gMetal)" stroke="#777"/><path d="M${x - 3} ${y} h6" stroke="#555" stroke-width="1.2"/>`).join('');
+  // sombra interna: a moldura projeta sombra sobre a face (painel embutido)
+  const inner = el('g', { 'pointer-events': 'none' }, svg);
+  inner.innerHTML = `<defs><linearGradient id="gIT" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".28"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gIL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient></defs>
+    <rect x="0" y="0" width="${FW}" height="16" fill="url(#gIT)"/><rect x="0" y="0" width="14" height="${FH}" fill="url(#gIL)"/>`;
   const gW = el('g', {}, svg), gJ = el('g', {}, svg), gC = el('g', {}, svg), gN = el('g', { 'pointer-events': 'none' }, svg), gP = el('g', {}, svg), gG = el('g', { 'pointer-events': 'none' }, svg);
   const SX = (x) => x, SY = (y) => y;
 
@@ -187,8 +204,11 @@ export function createLessonScreen(opts = {}) {
   const jackEls = new Map();
   for (const j of panel.jacks) {
     const g = el('g', { class: 'jk', 'data-j': j.id, transform: `translate(${j.x.toFixed(1)},${j.y.toFixed(1)})${j.scale && j.scale !== 1 ? ` scale(${j.scale})` : ''}` }, gJ);
-    g.innerHTML = `<circle r="${j.scale < 1 ? 15 : 11.5}" fill="transparent"/><circle r="9" fill="url(#gMetal)" stroke="#6d6f72" stroke-width=".8"/><circle r="6.8" fill="url(#gJ${j.c})" stroke="rgba(0,0,0,.35)" stroke-width=".6"/>` +
-      `<circle r="2.9" fill="#0d0d0d"/><circle r="12.5" class="hl"/>` +
+    // borne banana com profundidade: porca metálica, corpo isolante cônico, furo de 4 mm com sombra interna
+    g.innerHTML = `<circle r="${j.scale < 1 ? 15 : 11.5}" fill="transparent"/><circle r="9.4" cx="1.6" cy="2.6" fill="rgba(0,0,0,.28)" filter="url(#fJs)"/>` +
+      `<circle r="9" fill="url(#gNut)" stroke="#5e6164" stroke-width=".8"/><circle r="7.6" fill="none" stroke="rgba(255,255,255,.55)" stroke-width=".7" stroke-dasharray="2.6 1.4"/>` +
+      `<circle r="6.8" fill="url(#gJ${j.c})" stroke="rgba(0,0,0,.4)" stroke-width=".6"/><circle r="6.8" fill="url(#gCone)"/>` +
+      `<circle r="3.1" fill="url(#gHole)"/><circle r="3.1" fill="none" stroke="#9a9ca0" stroke-width=".55"/><path d="M-4.6 -3.4 A5.8 5.8 0 0 1 2.4 -5.5" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1" stroke-linecap="round"/><circle r="12.5" class="hl"/>` +
       (j.ext && j.label ? `<text x="16" y="3" font-size="8.5" font-weight="700" fill="#262626" font-family="Arial">${esc(j.label)}</text>` : '');
     jackEls.set(j.id, g);
   }

@@ -67,7 +67,7 @@ function rail(P, x0, x1, y0, h = 41) {
 function contactor(P, L1x, dark) {
   const bx = L1x + 22, bw = 62, by = 290, bh = 98;
   for (let i = 0; i < 5; i++) { const jx = L1x + [0, 27, 53, 78, 104][i]; const tx = bx + 8 + i * 11.5; whiteWire(P, jx, 254, tx, by + 6, 9); whiteWire(P, jx, 414, tx, by + bh - 6, -9); }
-  P.shadow(() => P.rrect(bx - 4, by - 3, bw + 8, bh + 6, 3, '#8f969c'), 6, 2, 4);
+  P.shadow(() => P.rrect(bx - 4, by - 3, bw + 8, bh + 6, 3, '#8f969c'), 16, 7, 11, 0.42);
   P.rrect(bx, by, bw, bh, 4, P.lg(bx, 0, bx + bw, 0, [[0, '#a9bccd'], [0.5, '#9bb0c3'], [1, '#7f95aa']]));
   P.rrect(bx + 3, by + 3, bw - 6, 20, 2, '#b9c8d5');
   for (let i = 0; i < 4; i++) { screw(P, bx + 10 + i * 13.5, by + 13, 3.6); screw(P, bx + 10 + i * 13.5, by + bh - 12, 3.6); }
@@ -80,7 +80,7 @@ function altronicRelay(P, A1x, kind) {
   const cx = A1x + 30, bx = cx - 16, by = 707, bw = 32, bh = 119;
   if (kind === 'tcs') { const tx = TCSX + 13; whiteWire(P, TCSX, 674, tx + 4, by + 4, 8); whiteWire(P, TCSX + 26, 674, tx + 18, by + 4, 8); }
   else if (kind !== 'fsn') for (let i = 0; i < 3; i++) whiteWire(P, A1x + i * 26, 674, bx + 6 + i * 10, by + 4, 9);
-  P.shadow(() => P.rrect(bx, by, bw, bh, 2.5, P.lg(bx, 0, bx + bw, 0, [[0, '#f3f2ee'], [1, '#cfccc4']])), 6, 2, 4);
+  P.shadow(() => P.rrect(bx, by, bw, bh, 2.5, P.lg(bx, 0, bx + bw, 0, [[0, '#f3f2ee'], [1, '#cfccc4']])), 16, 7, 11, 0.42);
   P.rrect(bx + 2, by + 22, bw - 4, 74, 2, '#e9e8e3');
   for (let i = 0; i < 3; i++) { screw(P, bx + 6 + i * 10, by + 8, 3); screw(P, bx + 6 + i * 10, by + bh - 8, 3); }
   bevel(P, bx, by, bw, bh, 2.5);
@@ -91,7 +91,7 @@ function altronicRelay(P, A1x, kind) {
 }
 function tcs(P) {
   const bx = TCSX + 13, by = 702, bw = 61, bh = 126;
-  P.shadow(() => P.rrect(bx + 16, by + 14, 36, 98, 2, '#cfccc4'), 6, 2, 4);
+  P.shadow(() => P.rrect(bx + 16, by + 14, 36, 98, 2, '#cfccc4'), 16, 7, 11, 0.42);
   P.rrect(bx + 16, by + 14, 36, 98, 2, P.lg(bx, 0, bx + bw, 0, [[0, '#e9e9e4'], [1, '#c9c9c2']]));
   for (let i = 0; i < 3; i++) { screw(P, bx + 22 + i * 12, by + 22, 3); screw(P, bx + 22 + i * 12, by + 103, 3); }
   bevel(P, bx + 16, by + 14, 36, 98, 2);
@@ -99,7 +99,7 @@ function tcs(P) {
 }
 function ctdBody(P, y0) {
   const bx = 288, by = y0, bw = 99, bh = 95;
-  P.shadow(() => P.rrect(bx, by, bw, bh, 3, '#121315'), 8, 3, 5);
+  P.shadow(() => P.rrect(bx, by, bw, bh, 3, '#121315'), 18, 8, 12, 0.5);
   P.rrect(bx + 3, by + 3, bw - 6, bh - 6, 2, P.lg(0, by, 0, by + bh, [[0, '#26282c'], [1, '#141518']]));
   P.text('ALTRONIC', bx + 44, by + 11, 4.6, { color: '#e8e8e8', weight: 800 }); P.circle(bx + 30, by + 11, 2.4, '#e8e8e8');
   P.rrect(bx + 10, by + 20, bw - 20, 42, 2, '#07090a');
@@ -113,14 +113,14 @@ function ctdBody(P, y0) {
 function breaker3(P) {
   const bx = 36, by = 687, bw = 101, bh = 134;
   [53, 86, 120].forEach((x, i) => { const col = ['#151515', '#f0f0ec', '#c21d1d'][i]; P.line([[x, 668], [x - 2, 680], [x, 694]], 3, col); P.text(['L1', 'L2', 'L3'][i], x, 660, 5.5); });
-  P.shadow(() => P.rrect(bx, by, bw, bh, 3, P.lg(bx, 0, bx + bw, 0, [[0, '#f5f5f2'], [1, '#d4d4cf']])), 7, 3, 5);
+  P.shadow(() => P.rrect(bx, by, bw, bh, 3, P.lg(bx, 0, bx + bw, 0, [[0, '#f5f5f2'], [1, '#d4d4cf']])), 18, 8, 12, 0.45);
   bevel(P, bx, by, bw, bh, 3);
   for (let i = 0; i < 3; i++) { const x = bx + i * 33.7; P.rect(x + 33.7, by + 4, 0.8, bh - 8, 'rgba(0,0,0,0.12)'); P.circle(x + 17, by + 10, 4, '#3a3a3a'); P.circle(x + 17, by + bh - 10, 4, '#3a3a3a'); P.rect(x + 5, by + 26, 24, 9, i === 1 ? '#5fb38a' : '#d9d9d4'); P.rrect(x + 7, by + 46, 20, 44, 2, '#e7e7e3', '#aaa', 0.6); }
 }
 function drBody(P) {
   const bx = 180, by = 689, bw = 118, bh = 132;
   [216, 234, 250, 269].forEach((x, i) => { P.text(['L1', 'L2', 'L3', 'N'][i], x, 660, 5.5); P.line([[x, 668], [x - 3, 684], [x, 694]], 2.6, '#f4f4f0'); });
-  P.shadow(() => P.rrect(bx, by, bw, bh, 3, P.lg(bx, 0, bx + bw, 0, [[0, '#f6f6f3'], [1, '#d6d6d1']])), 7, 3, 5);
+  P.shadow(() => P.rrect(bx, by, bw, bh, 3, P.lg(bx, 0, bx + bw, 0, [[0, '#f6f6f3'], [1, '#d6d6d1']])), 18, 8, 12, 0.45);
   bevel(P, bx, by, bw, bh, 3);
   for (let i = 0; i < 4; i++) { P.circle(bx + 16 + i * 22, by + 12, 4.5, '#3a3a3a'); P.circle(bx + 16 + i * 22, by + bh - 12, 4.5, '#3a3a3a'); }
   P.rrect(bx + 8, by + 30, 64, 70, 2, '#ededea', '#bbb', 0.6); for (let i = 0; i < 6; i++) P.rect(bx + 14, by + 40 + i * 8, 40 - i * 3, 1.6, '#888');
@@ -154,7 +154,7 @@ function screw(P, x, y, r = 3.4) {
   P.circle(x, y, r, P.lg(x - r, y - r, x + r, y + r, [[0, '#f2f4f5'], [1, '#8e959b']]), '#4b5157', 0.6);
   P.line([[x - r * 0.65, y], [x + r * 0.65, y]], 0.75, '#3a3f44'); P.line([[x, y - r * 0.65], [x, y + r * 0.65]], 0.75, '#3a3f44');
 }
-function jackShadow(P, x, y) { P.circle(x + 1, y + 1.6, 10.2, 'rgba(0,0,0,0.16)'); }
+function jackShadow(P, x, y) { P.shadow(() => P.circle(x + 1.5, y + 2.5, 9.5, 'rgba(0,0,0,0.22)'), 6, 1.5, 2.5, 0.35); }
 
 export function buildPanelB1(B, ppm = 2000) {
   const P = painter(ppm);

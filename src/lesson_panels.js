@@ -1,6 +1,6 @@
 // DONO: agente "aula-pratica". Monta o painel interativo do KET-1030 (face própria em mm, lesson_spec_b1.js) e o mapa
 // elétrico: cada borne banana → borne de um dispositivo do simulador (lesson_sim.js). Não depende dos módulos 3D.
-import { buildPanelB1 } from './lesson_spec_b1.js?v=20261008192305';
+import { buildPanelB1 } from './lesson_spec_b1.js?v=20261008201615';
 
 export const JACK_COL = { K: '#1b1b1b', R: '#c8201c', W: '#ecebe4', B: '#1d55c9', Y: '#e9bf14', G: '#1f9a3c' };
 
