@@ -1,7 +1,7 @@
 // DONO: agente "acessórios". Escadas de fibra de abrir (laranja-marrom, degraus, etiquetas) e escada simples de alumínio.
 import * as THREE from 'three';
-import { merge } from './props_util.js';
-import { fiberMaps, ladderLabel, railPrint, noiseTex } from './props_tex.js';
+import { merge } from './props_util.js?v=20261008191523';
+import { fiberMaps, ladderLabel, railPrint, noiseTex } from './props_tex.js?v=20261008191523';
 
 const Y = new THREE.Vector3(0, 1, 0);
 // Viga retangular de p0 a p1; w = espessura em z (largura da escada), d = profundidade no plano xy.

@@ -1,7 +1,7 @@
 // DONO: agente "bancadas". Layout de cada painel didático, reproduzido a partir de refs/foto1_full.jpg (recortes).
 // Coordenadas da face em metros: x ∈ [-0.865, 0.865] (esq→dir para quem olha o painel), y ∈ [-0.465, 0.465].
 // A API "A" pinta a serigrafia no canvas e instancia as peças 3D nos mesmos pontos (ver benches.js).
-import { paintYellowBg, paintWhiteBg, paintB1Bg, rng } from './benches_tex.js';
+import { paintYellowBg, paintWhiteBg, paintB1Bg, rng } from './benches_tex.js?v=20261008191523';
 
 export const TITLES = {
   b1: 'KET-1030: Proteção', b2: 'KET 1070: Industrial', b3: 'KET-1050: Proteção', b4: 'KET-1050: Proteção', b5: 'KET-1020: Comandos Elétricos',

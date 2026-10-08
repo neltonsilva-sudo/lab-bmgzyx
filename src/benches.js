@@ -2,10 +2,10 @@
 // chapa perfurada, prateleira inclinada, estrutura tubular, cabos de teste pendurados, cabos descendo do teto).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { BENCH_ROW, BENCHES, ROOM } from './layout.js';
-import * as TX from './benches_tex.js';
-import * as PG from './benches_parts.js';
-import { LAYOUTS, TITLES } from './benches_layouts.js';
+import { BENCH_ROW, BENCHES, ROOM } from './layout.js?v=20261008191523';
+import * as TX from './benches_tex.js?v=20261008191523';
+import * as PG from './benches_parts.js?v=20261008191523';
+import { LAYOUTS, TITLES } from './benches_layouts.js?v=20261008191523';
 
 const LW = 1.73, LH = 0.93;            // face nominal do layout (m)
 const JC = { K: 0x161616, R: 0xc41c1c, W: 0xe4e4dc, B: 0x1c4fc8, Y: 0xe8bf12, G: 0x1f9a3c };
