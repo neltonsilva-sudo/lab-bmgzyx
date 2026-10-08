@@ -168,6 +168,7 @@ export function createLessonScreen(opts = {}) {
     <linearGradient id="gFrame" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eceeef"/><stop offset="1" stop-color="#c9ccd0"/></linearGradient>
     <linearGradient id="gBench" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d6d9dc"/><stop offset="1" stop-color="#b9bdc1"/></linearGradient>
     <filter id="fGlow" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="6"/></filter>
+    <radialGradient id="lzPlugSh" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
     <filter id="fSh" x="-.3" y="-.3" width="1.6" height="1.6"><feDropShadow dx="1.5" dy="3" stdDeviation="2" flood-opacity=".45"/></filter>
     ${Object.entries(JACK_COL).map(([k, c]) => `<radialGradient id="gJ${k}" cx="38%" cy="32%"><stop offset="0" stop-color="${k === 'K' ? '#5a5a5a' : '#fff'}" stop-opacity="${k === 'K' ? 1 : 0.55}"/><stop offset=".45" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity=".85"/></radialGradient>`).join('')}`;
   // bancada abaixo do painel (chapa perfurada), moldura do painel
@@ -269,6 +270,26 @@ export function createLessonScreen(opts = {}) {
     const sag = 18 + d * (0.2 + 0.08 * rnd(seed));
     return `M${p1[0].toFixed(1)} ${p1[1].toFixed(1)} C${(p1[0] + dx * 0.12).toFixed(1)} ${(p1[1] + sag).toFixed(1)} ${(p2[0] - dx * 0.12).toFixed(1)} ${(p2[1] + sag).toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
   }
+  // Pino banana 4 mm de segurança (IEC 61010-031 / ABNT NBR IEC 61010-031): luva isolante rígida que cobre o pino,
+  // traseira empilhável (soquete de 4 mm), alívio de tração no cabo e marcação de categoria CAT III 1000 V / 32 A.
+  function safetyPlug(p, u, c, dk) {
+    const [x, y] = p;
+    const ang = (Math.atan2(u[1], u[0]) * 180) / Math.PI; // alinhado com a saída do cabo
+    return `<g class="plug">
+      <g transform="translate(${x},${y}) rotate(${ang.toFixed(1)})">
+        <rect x="4" y="-3.6" width="17" height="7.2" rx="3.2" fill="${dk}"/>
+        <rect x="5" y="-2.7" width="15" height="5.4" rx="2.6" fill="${c}"/>
+        ${[8.5, 11.5, 14.5, 17.5].map((r) => `<rect x="${r}" y="-2.7" width="1" height="5.4" fill="${dk}" opacity=".45"/>`).join('')}
+      </g>
+      <circle cx="${x}" cy="${y}" r="8.6" fill="${dk}"/>
+      <circle cx="${x}" cy="${y}" r="7.5" fill="${c}"/>
+      <circle cx="${x}" cy="${y}" r="7.5" fill="url(#lzPlugSh)"/>
+      <circle cx="${x}" cy="${y}" r="3.6" fill="#1a1a1a"/>
+      <circle cx="${x}" cy="${y}" r="3.6" fill="none" stroke="#c9ccd0" stroke-width="1.1"/>
+      <circle cx="${x}" cy="${y}" r="1.5" fill="#000"/>
+      <path d="M${x - 5.6} ${y - 4.4} A7 7 0 0 1 ${x + 2} ${y - 6.8}" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="1.3" stroke-linecap="round"/>
+    </g>`;
+  }
   function drawCables() {
     gC.innerHTML = '';
     const idx = stackIndex(), op = X.transparent ? 0.38 : 1;
@@ -276,11 +297,17 @@ export function createLessonScreen(opts = {}) {
       const A = jackById.get(w.ja), B = jackById.get(w.jb); if (!A || !B) continue;
       const ka = idx.get(w.id + 'ja'), kb = idx.get(w.id + 'jb');
       const pa = [SX(A.x) + ka * 4.5, SY(A.y) - ka * 4.5], pb = [SX(B.x) + kb * 4.5, SY(B.y) - kb * 4.5];
-      const [c, dk] = CABLE[w.color] || CABLE.R, d = cablePath(pa, pb, w.id);
+      const [c, dk] = CABLE[w.color] || CABLE.R;
+      // direção de saída do cabo em cada pino = tangente da curva; o cabo começa na ponta do alívio de tração
+      const ddx = pb[0] - pa[0], dd = Math.hypot(ddx, pb[1] - pa[1]), sag = 18 + dd * (0.2 + 0.08 * rnd(w.id));
+      const nrm = (x, y) => { const l = Math.hypot(x, y) || 1; return [x / l, y / l]; };
+      const ua = nrm(ddx * 0.12, sag), ub = nrm(-ddx * 0.12, sag), TL = 20;
+      const ta = [pa[0] + ua[0] * TL, pa[1] + ua[1] * TL], tb = [pb[0] + ub[0] * TL, pb[1] + ub[1] * TL];
+      const d = `M${ta[0].toFixed(1)} ${ta[1].toFixed(1)} C${(ta[0] + ua[0] * sag * 0.9).toFixed(1)} ${(ta[1] + ua[1] * sag * 0.9).toFixed(1)} ${(tb[0] + ub[0] * sag * 0.9).toFixed(1)} ${(tb[1] + ub[1] * sag * 0.9).toFixed(1)} ${tb[0].toFixed(1)} ${tb[1].toFixed(1)}`;
       const g = el('g', { class: 'cb', 'data-w': w.id, opacity: op }, gC);
       g.innerHTML = `<path d="${d}" fill="none" stroke="transparent" stroke-width="14"/><path class="cbo" d="${d}" fill="none" stroke="${dk}" stroke-width="6.4" stroke-linecap="round"/>
         <path d="${d}" fill="none" stroke="${c}" stroke-width="4.6" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="1.2" transform="translate(-1,-1)"/>` +
-        [pa, pb].map((p) => `<circle cx="${p[0]}" cy="${p[1]}" r="7.4" fill="${dk}"/><circle cx="${p[0]}" cy="${p[1]}" r="6.2" fill="${c}"/><circle cx="${p[0] - 1.8}" cy="${p[1] - 2}" r="2" fill="#fff" opacity=".35"/><circle cx="${p[0]}" cy="${p[1]}" r="2.4" fill="${dk}" opacity=".7"/>`).join('');
+        [[pa, ua], [pb, ub]].map(([p, u]) => safetyPlug(p, u, c, dk)).join('');
     }
   }
   const jackOfTerm = (t) => (jacksByTerm.get(t) || [])[0];

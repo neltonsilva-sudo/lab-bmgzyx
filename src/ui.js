@@ -191,6 +191,10 @@ export function buildUI(o) {
       lesson = mod.buildLesson({ THREE, L, camera, controls, canvas, scene, parts, setCam, render, toast, ui: { setWalk: (v) => { if (walking !== v) toggleWalk(); } } });
     }
     if (walking) toggleWalk();
+    if (/^(localhost|127\.)/.test(location.hostname) && o.q.get('aulademo') === '1') setTimeout(() => { try { const Ls = window.__lesson; Ls.startScript('direta', 'Demo'); Ls.nrAction('secc'); Ls.nrAction('loto'); Ls.testMeter(); [['PWR.L1','PWR.L2'],['PWR.L2','PWR.L3'],['PWR.L1','PWR.L3'],['PWR.L1','PWR.N'],['PWR.L2','PWR.N'],['PWR.L3','PWR.N']].forEach(([a, b]) => Ls.probe(a, b)); Ls.nrAction('ground'); Ls.nrAction('protect'); Ls.nrAction('sign');
+      [['PWR.L1','K1.1'],['PWR.L2','K1.3'],['PWR.L3','K1.5'],['K1.2','M1.1'],['K1.4','M1.2'],['K1.6','M1.3'],['M1.1','M1.6'],['M1.2','M1.4'],['M1.3','M1.5'],['PWR.L1','CH2.11'],['CH2.12','CH1.13'],['CH1.14','K1.A1'],['K1.A2','PWR.N'],['CH1.13','K1.13'],['CH1.14','K1.14']].forEach(([a, b], i) => { Ls.setColor('RKBYWG'[i % 6]); Ls.wireT(a, b); });
+      if (o.q.get('ligar') === '1') { Ls.openEnergize(); setTimeout(() => { const d = document.getElementById('lzDlg'); let k = 0; const step = () => { d.querySelectorAll('[data-r]').forEach((b) => b.click()); d.querySelectorAll('[data-c]').forEach((b) => { if (!b.checked) { b.checked = true; b.dispatchEvent(new Event('change')); } }); if (++k < 6) setTimeout(step, 80); else { document.getElementById('lzDoEn').click(); setTimeout(() => { Ls.press('CH1', true); setTimeout(() => Ls.press('CH1', false), 250); }, 300); } }; step(); }, 200); }
+    } catch (e) { console.error(e); } }, 900);
     try { lesson.open(id); } catch (e) { console.error(e); toast('Erro ao abrir a aula prática: ' + e.message, true, 6000); }
   }
   if (o.q.get('aula')) setTimeout(() => openLesson(o.q.get('aula')), 800);
