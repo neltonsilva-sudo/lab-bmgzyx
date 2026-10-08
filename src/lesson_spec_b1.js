@@ -67,7 +67,6 @@ function rail(P, x0, x1, y0, h = 41) {
 function contactor(P, L1x, dark) {
   const bx = L1x + 22, bw = 62, by = 290, bh = 98;
   for (let i = 0; i < 5; i++) { const jx = L1x + [0, 27, 53, 78, 104][i]; const tx = bx + 8 + i * 11.5; whiteWire(P, jx, 254, tx, by + 6, 9); whiteWire(P, jx, 414, tx, by + bh - 6, -9); }
-  if (dark) P.shadow(() => P.rrect(bx - 14, by - 6, 30, bh + 12, 2, '#1d1e20'), 6, 2, 4);
   P.shadow(() => P.rrect(bx - 4, by - 3, bw + 8, bh + 6, 3, '#8f969c'), 6, 2, 4);
   P.rrect(bx, by, bw, bh, 4, P.lg(bx, 0, bx + bw, 0, [[0, '#a9bccd'], [0.5, '#9bb0c3'], [1, '#7f95aa']]));
   P.rrect(bx + 3, by + 3, bw - 6, 20, 2, '#b9c8d5');
@@ -80,7 +79,6 @@ function altronicRelay(P, A1x, kind) {
   const cx = A1x + 30, bx = cx - 16, by = 707, bw = 32, bh = 119;
   if (kind === 'tcs') { const tx = TCSX + 13; whiteWire(P, TCSX, 674, tx + 4, by + 4, 8); whiteWire(P, TCSX + 26, 674, tx + 18, by + 4, 8); }
   else if (kind !== 'fsn') for (let i = 0; i < 3; i++) whiteWire(P, A1x + i * 26, 674, bx + 6 + i * 10, by + 4, 9);
-  if (kind === 'ryd') P.shadow(() => P.rrect(bx - 10, by - 8, bw + 14, bh + 14, 2, '#202124'), 6, 2, 4);
   P.shadow(() => P.rrect(bx, by, bw, bh, 2.5, P.lg(bx, 0, bx + bw, 0, [[0, '#f3f2ee'], [1, '#cfccc4']])), 6, 2, 4);
   P.rrect(bx + 2, by + 22, bw - 4, 74, 2, '#e9e8e3');
   for (let i = 0; i < 3; i++) { P.circle(bx + 6 + i * 10, by + 8, 3, '#bfc2c5', '#666', 0.6); P.circle(bx + 6 + i * 10, by + bh - 8, 3, '#bfc2c5', '#666', 0.6); }
@@ -91,7 +89,7 @@ function altronicRelay(P, A1x, kind) {
 }
 function tcs(P) {
   const bx = TCSX + 13, by = 702, bw = 61, bh = 126;
-  P.shadow(() => P.rrect(bx, by, bw, bh, 3, '#1c1d1f'), 6, 2, 4);
+  P.shadow(() => P.rrect(bx + 16, by + 14, 36, 98, 2, '#cfccc4'), 6, 2, 4);
   P.rrect(bx + 16, by + 14, 36, 98, 2, P.lg(bx, 0, bx + bw, 0, [[0, '#e9e9e4'], [1, '#c9c9c2']]));
   for (let i = 0; i < 3; i++) { P.circle(bx + 22 + i * 12, by + 22, 3, '#bfc2c5', '#555', 0.6); P.circle(bx + 22 + i * 12, by + 103, 3, '#bfc2c5', '#555', 0.6); }
   P.rrect(bx + 22, by + 40, 24, 8, 1, '#c7cbc0'); P.circle(bx + 34, by + 66, 6, '#f2f2ee', '#777', 0.6); P.text('TCS-01', bx + 34, by + 90, 3.2, { color: '#444' });
