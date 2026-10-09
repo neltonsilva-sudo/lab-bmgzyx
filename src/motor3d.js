@@ -8,8 +8,8 @@ export function buildMotor3D(ctx) {
   if (!f) return null;
   const hole = f.layoutToFace((810 - 510) * 0.0018602, (718 - 533) * 0.0016034); // furo do painel (benches_layouts)
   const root = new THREE.Group(); root.name = 'motorM1';
-  const sc = f.width / 1.1; // escala relativa à face (~1,1 m)
-  root.position.set(hole.x + 0.085 * sc, hole.y, 0); root.scale.setScalar(sc);
+  const sc = (f.width / 1.1) * 0.72; // escala relativa à face (~1,1 m), reduzido a pedido
+  root.position.set(hole.x + 0.085 * sc + 0.012, hole.y, 0); root.scale.setScalar(sc);
   f.face.add(root);
 
   const M = {

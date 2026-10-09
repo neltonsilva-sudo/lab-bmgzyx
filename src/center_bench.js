@@ -2,8 +2,8 @@
 // rodízios, estrutura em perfil de alumínio (níveis com módulos azuis de instrumentos), painel de comando inclinado, fonte,
 // lâmpada, rolo branco, cabos; mesa em L e caixa branca. Coordenadas locais: origem no centro da mesa, no piso; +z = frente.
 import * as THREE from 'three';
-import { Batch, mtx, profile, bar, caster, cylGeo, BOX } from './center_lib.js?v=20261009094944';
-import { moduleFace, kwhFace, dialFace, lcdFace, plcFace, whiteBoxFace, cmdFace, psuFace } from './center_tex.js?v=20261009094944';
+import { Batch, mtx, profile, bar, caster, cylGeo, BOX } from './center_lib.js?v=20261009095432';
+import { moduleFace, kwhFace, dialFace, lcdFace, plcFace, whiteBoxFace, cmdFace, psuFace } from './center_tex.js?v=20261009095432';
 
 export const BENCH_DIM = { TW: 1.58, TD: 0.75, TH: 0.9 };
 // Estrutura de alumínio (local): montantes em x = XL/XR, frente ZF, fundo ZB (medidos nas fotos calibradas).

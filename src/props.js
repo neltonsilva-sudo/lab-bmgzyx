@@ -1,12 +1,12 @@
 // DONO: agente "acessórios". Cadeiras, pedestais com correntes, escadas de fibra, extintor, mesas laterais, armário/painel elétrico
 // do fundo à direita e pequenos objetos. Todas as posições derivam das constantes de layout.js (nada fixo em coordenada absoluta).
 import * as THREE from 'three';
-import { ROOM, BOOTHS, CENTER, BENCH_ROW, SOLAR, STANCHIONS } from './layout.js?v=20261009094944';
-import { buildChairs, CHAIR_BOX } from './props_chairs.js?v=20261009094944';
-import { buildStanchions } from './props_chain.js?v=20261009094944';
-import { stepLadder, straightLadder } from './props_ladders.js?v=20261009094944';
-import { buildExtinguisher, buildSideTable, buildToolBench, buildCabinet } from './props_misc.js?v=20261009094944';
-import { contactShadow } from './props_util.js?v=20261009094944';
+import { ROOM, BOOTHS, CENTER, BENCH_ROW, SOLAR, STANCHIONS } from './layout.js?v=20261009095432';
+import { buildChairs, CHAIR_BOX } from './props_chairs.js?v=20261009095432';
+import { buildStanchions } from './props_chain.js?v=20261009095432';
+import { stepLadder, straightLadder } from './props_ladders.js?v=20261009095432';
+import { buildExtinguisher, buildSideTable, buildToolBench, buildCabinet } from './props_misc.js?v=20261009095432';
+import { contactShadow } from './props_util.js?v=20261009095432';
 
 // Posições (derivadas do layout) — exportadas para inspeção/ajuste.
 export function propPlacements() {

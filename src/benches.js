@@ -2,10 +2,10 @@
 // chapa perfurada, prateleira inclinada, estrutura tubular, cabos de teste pendurados, cabos descendo do teto).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { BENCH_ROW, BENCHES, ROOM } from './layout.js?v=20261009094944';
-import * as TX from './benches_tex.js?v=20261009094944';
-import * as PG from './benches_parts.js?v=20261009094944';
-import { LAYOUTS, TITLES } from './benches_layouts.js?v=20261009094944';
+import { BENCH_ROW, BENCHES, ROOM } from './layout.js?v=20261009095432';
+import * as TX from './benches_tex.js?v=20261009095432';
+import * as PG from './benches_parts.js?v=20261009095432';
+import { LAYOUTS, TITLES } from './benches_layouts.js?v=20261009095432';
 
 const LW = 1.73, LH = 0.93;            // face nominal do layout (m)
 const JC = { K: 0x161616, R: 0xc41c1c, W: 0xe4e4dc, B: 0x1c4fc8, Y: 0xe8bf12, G: 0x1f9a3c };
@@ -142,7 +142,7 @@ export function buildBenches(scene, ctx) {
       label(t, x, y, s = 0.009, o = {}) { P.text(t, x, y, s, { weight: 700, color: '#262626', ...o }); },
       jack(x, y, c = 'K', label, tag) {
         { const js = b.id === 'b1' ? 0.7 : 1; put('jack', BM, px(x), py(y), Z0, js, js, js, JC[c] ?? c); } { const v = new THREE.Vector3(px(x), py(y), Z0 + 0.012).applyMatrix4(BM); v.label = tag ?? label ?? null; (jacksW[b.id] ||= []).push(v); }
-        P.circle(x, y, 0.0092, 'rgba(0,0,0,0.18)');
+        if (b.id !== 'b1') P.circle(x, y, 0.0092, 'rgba(0,0,0,0.18)');
         if (label) A.label(label, x, y + 0.0155, 0.0085);
       },
       jrow(x0, y, dx, cols, labels) { [...cols].forEach((c, i) => A.jack(x0 + i * dx, y, c, labels && labels[i])); },
@@ -150,7 +150,7 @@ export function buildBenches(scene, ctx) {
       rail(x0, x1, y, sy = 1) { put('rail', BM, px((x0 + x1) / 2), py(y), Z0, (x1 - x0) * SX, sy, 1); },
       dev(key, x, y, sx = 1, sy = 1) { put(key, BM, px(x), py(y), Z0 + 0.0075, sx, sy, 1, 0xffffff); },
       ctd(x, y) { put('ctd', BM, px(x), py(y), Z0, 1, 1, 1, 0xffffff); },
-      mini(x, y) { put('jack', BM, px(x), py(y), Z0, 0.55, 0.55, 0.7, JC.K); (jacksW[b.id] ||= []).push(new THREE.Vector3(px(x), py(y), Z0 + 0.008).applyMatrix4(BM)); P.circle(x, y, 0.0062, 'rgba(0,0,0,0.25)'); },
+      mini(x, y) { put('jack', BM, px(x), py(y), Z0, 0.55, 0.55, 0.7, JC.K); (jacksW[b.id] ||= []).push(new THREE.Vector3(px(x), py(y), Z0 + 0.008).applyMatrix4(BM)); if (b.id !== 'b1') P.circle(x, y, 0.0062, 'rgba(0,0,0,0.25)'); },
       wire(jx, jy, ex, ey, ez, col = 0xf4f4f2) {
         if (low) return;
         const x0 = px(jx), y0 = py(jy), s = ey > y0 ? 1 : -1;
