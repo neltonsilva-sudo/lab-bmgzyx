@@ -4,8 +4,8 @@
 // quadros plastificados de ferramentas e placas azuis na testeira da sanca. Layout medido nas fotos 2 e 3.
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { BOOTHS, ROOM } from './layout.js?v=20261009095432';
-import { paintedWall, plasterNormal, yellowBoxTex, darkBoxTex, posterTex, plateTex, floorAOTex, rng } from './booths_tex.js?v=20261009095432';
+import { BOOTHS, ROOM } from './layout.js?v=20261009141848';
+import { paintedWall, plasterNormal, yellowBoxTex, darkBoxTex, posterTex, plateTex, floorAOTex, rng } from './booths_tex.js?v=20261009141848';
 
 // Conteúdo da parede de fundo de cada box, do fundo da sala (i=0) para a entrada (i=4).
 // u = distância (m) a partir da borda +z (lado da entrada, esquerda na foto); v = altura do centro (m).

@@ -2,10 +2,10 @@
 // chapa perfurada, prateleira inclinada, estrutura tubular, cabos de teste pendurados, cabos descendo do teto).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { BENCH_ROW, BENCHES, ROOM } from './layout.js?v=20261009095432';
-import * as TX from './benches_tex.js?v=20261009095432';
-import * as PG from './benches_parts.js?v=20261009095432';
-import { LAYOUTS, TITLES } from './benches_layouts.js?v=20261009095432';
+import { BENCH_ROW, BENCHES, ROOM } from './layout.js?v=20261009141848';
+import * as TX from './benches_tex.js?v=20261009141848';
+import * as PG from './benches_parts.js?v=20261009141848';
+import { LAYOUTS, TITLES } from './benches_layouts.js?v=20261009141848';
 
 const LW = 1.73, LH = 0.93;            // face nominal do layout (m)
 const JC = { K: 0x161616, R: 0xc41c1c, W: 0xe4e4dc, B: 0x1c4fc8, Y: 0xe8bf12, G: 0x1f9a3c };
@@ -51,6 +51,11 @@ export function buildBenches(scene, ctx) {
   // plástico técnico semibrilho (disjuntores, contatores, relés, botoeiras) e metal dos parafusos de borne
   const mPlastic = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.0, clearcoat: 0.35, clearcoatRoughness: 0.42 });
   const mMetal = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.3, metalness: 0.85 });
+  // sombra projetada dos módulos sobre o trilho DIN (plano translúcido com bordas suaves)
+  const mRailShadow = (() => { const c = document.createElement('canvas'); c.width = 64; c.height = 16; const gg = c.getContext('2d');
+    const gr = gg.createLinearGradient(0, 0, 64, 0); gr.addColorStop(0, 'rgba(0,0,0,0.75)'); gr.addColorStop(0.55, 'rgba(0,0,0,0.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    gg.fillStyle = gr; gg.fillRect(0, 0, 64, 16); const t = new THREE.CanvasTexture(c);
+    return new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, opacity: 0.55, color: 0x2a2010 }); })();
   const mPerf = []; // por bancada (densidade dos furos)
   const perfA = TX.perfTex(renderer, 10, 3, 0.2, 3), perfB = TX.perfTex(renderer, 11, 5, 0.19, 4);
   for (const p of [perfA, perfB]) mPerf.push(new THREE.MeshStandardMaterial({ map: p.map, alphaMap: p.alpha, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.6, metalness: 0.05 }));
@@ -78,7 +83,7 @@ export function buildBenches(scene, ctx) {
     tall: [PG.tallRelayGeo(false), mPlastic, PG.tallRelayGeo(false, 'm')], tallD: [PG.tallRelayGeo(true), mPlastic, PG.tallRelayGeo(true, 'm')],
     brk3: [PG.breakerNGeo(3, false, 'p', 1.8, 1.04), mPlastic, PG.breakerNGeo(3, false, 'm', 1.8, 1.04)],
     dr4: [PG.breakerNGeo(4, true, 'p', 1.5, 1.04), mPlastic, PG.breakerNGeo(4, true, 'm', 1.5, 1.04)],
-    tube: [PG.box(1, 1, 1, 0, 0, 0, 0xffffff), mTube], foot: [PG.cylZ(0.022, 0.018, 0, 0x202020, 12), mVC],
+    tube: [PG.box(1, 1, 1, 0, 0, 0, 0xffffff), mTube], railShadow: [new THREE.PlaneGeometry(1, 1), mRailShadow], foot: [PG.cylZ(0.022, 0.018, 0, 0x202020, 12), mVC],
   };
   for (const k of ['red', 'blue', 'green']) defs['disp_' + k] = [PG.displayPlane(), dispMat[k]];
   const dome = PG.domeGeo();
@@ -96,9 +101,17 @@ export function buildBenches(scene, ctx) {
   function tube(listKey, pts, radius, color, segs, rad = 4, parent) {
     const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
     const geo = new THREE.TubeGeometry(curve, segs, radius, rad, false);
-    if (parent) geo.applyMatrix4(parent);
     const c = new THREE.Color(color), n = geo.attributes.position.count, a = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
+    if (listKey === 'wireW' || listKey === 'wireR') {
+      // relevo assado (luz de cima-esquerda-frente + brilho especular estreito + sombra própria embaixo)
+      const nr = geo.attributes.normal, Lx = -0.38, Ly = 0.55, Lz = 0.74, Hx = -0.19, Hy = 0.28, Hz = 0.94, hl = Math.hypot(Hx, Hy, Hz);
+      for (let i = 0; i < n; i++) {
+        const nx = nr.getX(i), ny = nr.getY(i), nz = nr.getZ(i), d = Math.max(0, nx * Lx + ny * Ly + nz * Lz);
+        const sp = Math.pow(Math.max(0, (nx * Hx + ny * Hy + nz * Hz) / hl), 24) * 0.35, f = 0.42 + 0.62 * d;
+        a[i * 3] = Math.min(1, c.r * f + sp); a[i * 3 + 1] = Math.min(1, c.g * f + sp); a[i * 3 + 2] = Math.min(1, c.b * f + sp);
+      }
+    } else for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
+    if (parent) geo.applyMatrix4(parent);
     geo.setAttribute('color', new THREE.BufferAttribute(a, 3)); geo.deleteAttribute('uv');
     cableGeos[listKey].push(geo);
   }
@@ -147,18 +160,29 @@ export function buildBenches(scene, ctx) {
       },
       jrow(x0, y, dx, cols, labels) { [...cols].forEach((c, i) => A.jack(x0 + i * dx, y, c, labels && labels[i])); },
       jcol(x, y0, dy, cols, labels) { [...cols].forEach((c, i) => A.jack(x, y0 + i * dy, c, labels && labels[i])); },
-      rail(x0, x1, y, sy = 1) { put('rail', BM, px((x0 + x1) / 2), py(y), Z0, (x1 - x0) * SX, sy, 1); },
-      dev(key, x, y, sx = 1, sy = 1) { put(key, BM, px(x), py(y), Z0 + 0.0075, sx, sy, 1, 0xffffff); },
-      ctd(x, y) { put('ctd', BM, px(x), py(y), Z0, 1, 1, 1, 0xffffff); },
+      rail(x0, x1, y, sy = 1) { put('rail', BM, px((x0 + x1) / 2), py(y), Z0, (x1 - x0) * SX, sy, 1); A._railY = y; },
+      // sombra suave pintada na face (deslocada para baixo-direita) + faixa de sombra no trilho DIN
+      soft(x, y, w, h, railY) {
+        if (b.id !== 'b1') return;
+        const gg = P.g; gg.save(); gg.shadowColor = 'rgba(60,40,0,0.55)'; gg.shadowBlur = P.S(0.012); gg.shadowOffsetX = P.S(0.005); gg.shadowOffsetY = P.S(0.008);
+        gg.fillStyle = 'rgba(60,40,0,0.35)'; gg.fillRect(P.X(x - w / 2), P.Y(y + h / 2), P.S(w), P.S(h)); gg.restore();
+        if (railY != null && !low) put('railShadow', BM, px(x + w / 2) + 0.007, py(railY), Z0 + 0.0088, 0.016, 0.042, 1, 0xffffff);
+      },
+      dev(key, x, y, sx = 1, sy = 1) {
+        put(key, BM, px(x), py(y), Z0 + 0.0075, sx, sy, 1, 0xffffff);
+        if (key === 'tall' || key === 'tallD') A.soft(x + 0.002, y, 0.032 * sx / SX, 0.12 * sy, A._railY);
+        if (key === 'brk3' || key === 'dr4') A.soft(x, y, (key === 'brk3' ? 0.054 : 0.072) * sx / SX, 0.12 * sy, A._railY);
+      },
+      ctd(x, y) { A.soft(x, y, 0.094 / SX, 0.094); put('ctd', BM, px(x), py(y), Z0, 1, 1, 1, 0xffffff); },
       mini(x, y) { put('jack', BM, px(x), py(y), Z0, 0.55, 0.55, 0.7, JC.K); (jacksW[b.id] ||= []).push(new THREE.Vector3(px(x), py(y), Z0 + 0.008).applyMatrix4(BM)); if (b.id !== 'b1') P.circle(x, y, 0.0062, 'rgba(0,0,0,0.25)'); },
       wire(jx, jy, ex, ey, ez, col = 0xf4f4f2) {
         if (low) return;
         const x0 = px(jx), y0 = py(jy), s = ey > y0 ? 1 : -1;
-        tube('wireW', [V(x0, y0, 0.013), V(x0, y0 + s * 0.008, 0.032), V((x0 + ex) / 2, ey - s * 0.018, ez + 0.016), V(ex, ey - s * 0.004, ez)], 0.0016, col, 8, 4, BM);
+        tube('wireW', [V(x0, y0, 0.013), V(x0, y0 + s * 0.008, 0.032), V((x0 + ex) / 2, ey - s * 0.018, ez + 0.016), V(ex, ey - s * 0.004, ez)], 0.0016, col, 10, 8, BM);
       },
       k3rt(x, y, xs, topY, botY) {
         const X = px(x), Y = py(y), zc = Z0 + 0.0075;
-        put('k3rt', BM, X, Y, zc, 1, 1, 1, 0xffffff);
+        put('k3rt', BM, X, Y, zc, 1, 1, 1, 0xffffff); A.soft(x + 0.002 / SX, y, 0.066 / SX, 0.104, A._railY);
         const tx = [-0.019, -0.0065, 0.006, 0.025, 0.025], ty = [0.04, 0.04, 0.04, 0.028, 0.028], tz = [0.09, 0.09, 0.09, 0.077, 0.077];
         xs.forEach((jx, i) => { A.wire(jx, topY, X + tx[i], Y + ty[i], zc + tz[i]); A.wire(jx, botY, X + tx[i], Y - ty[i], zc + tz[i]); });
       },
@@ -166,11 +190,11 @@ export function buildBenches(scene, ctx) {
       shortWires(x, y, cols, dx = 0.021) {
         if (low) return;
         const X = px(x), Y = py(y);
-        cols.forEach((c, i) => { const x0 = X + (i - (cols.length - 1) / 2) * dx; tube('wireW', [V(x0, Y, 0.05), V(x0, Y + 0.02, 0.06), V(x0 + 0.01, Y + 0.035, 0.03), V(x0 + 0.012, Y + 0.04, 0.012)], 0.0018, c, 8, 4, BM); });
+        cols.forEach((c, i) => { const x0 = X + (i - (cols.length - 1) / 2) * dx; tube('wireW', [V(x0, Y, 0.05), V(x0, Y + 0.02, 0.06), V(x0 + 0.01, Y + 0.035, 0.03), V(x0 + 0.012, Y + 0.04, 0.012)], 0.0018, c, 10, 8, BM); });
       },
       jumpers(x0, y0, x1, y1) {
         if (low) return;
-        for (const xx of [x0, x1]) { const X = px(xx); tube('wireW', [V(X, py(y0), 0.014), V(X, py(y0) - 0.01, 0.04), V(X + 0.004, py(y1) + 0.01, 0.045), V(X + 0.006, py(y1), 0.02)], 0.0016, 0xf4f4f2, 8, 4, BM); }
+        for (const xx of [x0, x1]) { const X = px(xx); tube('wireW', [V(X, py(y0), 0.014), V(X, py(y0) - 0.01, 0.04), V(X + 0.004, py(y1) + 0.01, 0.045), V(X + 0.006, py(y1), 0.02)], 0.0016, 0xf4f4f2, 10, 8, BM); }
       },
       K(x, y, name, o = {}) {
         const X = px(x), Y = py(y), zc = Z0 + 0.0075;

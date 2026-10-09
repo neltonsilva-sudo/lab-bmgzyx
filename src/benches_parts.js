@@ -143,9 +143,26 @@ function screwHead(M, x, y, z, r = 0.0032) {
 function marks(P, x, y, z, w, rows, col = 0x55575a, lh = 0.0011, gap = 0.0026) {
   for (let i = 0; i < rows; i++) P.push(box(w * (i % 2 ? 0.7 : 1), lh, 0.0004, x - (i % 2 ? w * 0.15 : 0), y - i * gap, z, col));
 }
+// "luz de estúdio" assada nas cores por vértice: chanfros/laterais voltados para baixo-direita escurecem, para
+// cima-esquerda clareiam; vértices perto da face (fundo da peça) recebem oclusão. Dá volume mesmo na vista frontal.
+export function bakeShade(g, k = 1) {
+  const n = g.attributes.normal, p = g.attributes.position, c = g.attributes.color; if (!n || !c) return g;
+  g.computeBoundingBox(); const bb = g.boundingBox, zr = Math.max(1e-4, bb.max.z - bb.min.z), yr = Math.max(1e-4, bb.max.y - bb.min.y);
+  for (let i = 0; i < n.count; i++) {
+    const nx = n.getX(i), ny = n.getY(i), nz = n.getZ(i);
+    let f = 0.8 + 0.2 * Math.max(0, nz) + 0.2 * ny - 0.12 * nx;                 // direcional (cima-esquerda)
+    if (nz < 0.95) f -= 0.08 * (1 - Math.max(0, nz));                           // laterais/chanfros um pouco mais escuros
+    f *= 0.72 + 0.28 * Math.min(1, Math.max(0, (p.getZ(i) - bb.min.z) / zr) * 1.6); // oclusão no fundo
+    f *= 1 + 0.07 * ((p.getY(i) - bb.min.y) / yr - 0.5);                          // gradiente vertical suave
+    f = 1 + (f - 1) * k;
+    c.setXYZ(i, Math.min(1, c.getX(i) * f), Math.min(1, c.getY(i) * f), Math.min(1, c.getZ(i) * f));
+  }
+  c.needsUpdate = true; return g;
+}
 const build = (fn, part, sx = 1, sy = 1) => {
   const P = [], M = []; fn(P, M);
   const g = merge(part === 'm' ? M : P);
+  if (part !== 'm') bakeShade(g);
   if (sx !== 1 || sy !== 1) { g.scale(1 / sx, 1 / sy, 1); g.computeBoundingSphere(); }
   return g;
 };
@@ -156,10 +173,11 @@ const build = (fn, part, sx = 1, sy = 1) => {
 export function contactor3rtGeo(part = 'p') {
   return build((P, M) => {
     const BL = 0x8ba3ba, BL2 = 0x9cb1c5, DK = 0x17181b;
-    P.push(rbox(0.058, 0.106, 0.03, -0.006, 0, 0.015, 0x2a2b2e, 0.0015, 0.002));          // base/trilho
-    P.push(rbox(0.047, 0.1, 0.052, -0.006, 0, 0.04, BL, 0.002, 0.002));                    // corpo
+    P.push(rbox(0.058, 0.106, 0.03, -0.006, 0, 0.015, 0x2a2b2e, 0.0025, 0.003));          // base/trilho
+    P.push(rbox(0.049, 0.101, 0.056, -0.006, 0, 0.038, BL, 0.0042, 0.003));                // corpo (chanfro largo)
+    for (const s of [1, -1]) P.push(box(0.0012, 0.094, 0.05, -0.006 + s * 0.0247, 0, 0.038, 0x5e7184)); // vinco lateral
     for (const s of [1, -1]) {
-      P.push(rbox(0.046, 0.026, 0.026, -0.006, s * 0.036, 0.077, BL2, 0.0018, 0.0015));    // blocos de bornes (degrau)
+      P.push(rbox(0.046, 0.026, 0.026, -0.006, s * 0.036, 0.077, BL2, 0.0032, 0.002));     // blocos de bornes (degrau)
       P.push(box(0.044, 0.0012, 0.001, -0.006, s * 0.0235, 0.0655, 0x5d6f80));               // sombra do degrau
       for (let i = 0; i < 3; i++) {
         const x = -0.019 + i * 0.0125;
@@ -170,15 +188,17 @@ export function contactor3rtGeo(part = 'p') {
         P.push(box(0.004, 0.0022, 0.0004, x, s * 0.0285, 0.0902, 0xf2f2f0));                  // número do borne
       }
     }
-    P.push(rbox(0.041, 0.042, 0.018, -0.006, 0, 0.073, BL2, 0.0016, 0.0015));               // frente central
+    P.push(rbox(0.043, 0.046, 0.006, -0.006, 0, 0.0655, 0x6c8095, 0.001, 0.002));           // rebaixo escuro em volta da frente
+    P.push(rbox(0.041, 0.042, 0.018, -0.006, 0, 0.073, BL2, 0.003, 0.002));                 // frente central
     P.push(rbox(0.024, 0.009, 0.0024, -0.006, 0.01, 0.0822, DK, 0.0005, 0.001));            // janela do indicador
     P.push(rbox(0.008, 0.005, 0.002, -0.009, 0.01, 0.0828, 0xe8e8e4, 0.0004, 0.0005));      // corrediça (desligado)
     P.push(rbox(0.03, 0.013, 0.0012, -0.006, -0.009, 0.0822, 0xf4f4f1, 0.0003, 0.001));     // plaqueta
     marks(P, -0.006, -0.0055, 0.0829, 0.022, 3, 0x4d5257);
     P.push(box(0.008, 0.0035, 0.0006, -0.019, 0.0018, 0.0823, 0x0f6fb8));                   // logotipo azul
     // bloco auxiliar lateral
-    P.push(rbox(0.0155, 0.074, 0.07, 0.0255, 0, 0.035, 0xbfc8d0, 0.0015, 0.0015));
-    P.push(rbox(0.0135, 0.04, 0.005, 0.0255, 0.0, 0.0715, 0xcad2d9, 0.0012, 0.0012));
+    P.push(rbox(0.017, 0.08, 0.03, 0.0255, 0, 0.015, 0x2a2b2e, 0.002, 0.002));            // pé do bloco auxiliar
+    P.push(rbox(0.0155, 0.074, 0.07, 0.0255, 0, 0.037, 0xbfc8d0, 0.003, 0.002));
+    P.push(rbox(0.0135, 0.04, 0.007, 0.0255, 0.0, 0.0735, 0xcad2d9, 0.0022, 0.0015));
     for (let k = 0; k < 3; k++) P.push(box(0.009, 0.0008, 0.0008, 0.0255, -0.012 - k * 0.0028, 0.0742, 0x8e98a2));
     P.push(rbox(0.011, 0.02, 0.0012, 0.0255, 0.006, 0.0742, 0xf3f3f1, 0.0003, 0.0008));
     marks(P, 0.0255, 0.0125, 0.0749, 0.007, 5, 0x55595d, 0.0009, 0.0028);
@@ -211,7 +231,8 @@ export function tallRelayGeo(dark = false, part = 'p') {
   return build((P, M) => {
     const W = dark ? 0x26272a : 0xe2e2dd, W2 = dark ? 0x2e2f32 : 0xebebe6, DK = 0x18191b;
     P.push(rbox(0.034, 0.124, 0.03, 0.003, 0, 0.015, 0x1e1f21, 0.0012, 0.0015));
-    P.push(rbox(0.03, 0.118, 0.048, 0, 0, 0.025, W, 0.0018, 0.0015));
+    P.push(rbox(0.031, 0.118, 0.048, 0, 0, 0.025, W, 0.0035, 0.0022));
+    for (const s of [1, -1]) P.push(box(0.0009, 0.11, 0.04, s * 0.0152, 0, 0.026, dark ? 0x0e0e0f : 0xa9a9a3)); // junta das meias-carcaças
     for (const s of [1, -1]) {
       P.push(box(0.028, 0.0012, 0.0008, 0, s * 0.033, 0.049, dark ? 0x111111 : 0xb9b9b3));  // sombra do degrau
       for (const x of [-0.009, 0, 0.009]) {
@@ -221,7 +242,8 @@ export function tallRelayGeo(dark = false, part = 'p') {
       }
       P.push(box(0.022, 0.0016, 0.0004, 0, s * 0.0395, 0.0501, dark ? 0x9a9a9a : 0x5a5d60)); // números dos bornes
     }
-    P.push(rbox(0.028, 0.062, 0.024, 0, 0.0, 0.0605, W2, 0.0016, 0.0015));                  // frente elevada
+    P.push(rbox(0.0285, 0.065, 0.004, 0, 0.0, 0.0495, dark ? 0x101011 : 0xb2b2ac, 0.0008, 0.0015)); // sombra do degrau frontal
+    P.push(rbox(0.028, 0.062, 0.024, 0, 0.0, 0.0605, W2, 0.003, 0.002));                    // frente elevada
     P.push(rbox(0.023, 0.028, 0.0008, 0, 0.012, 0.0727, dark ? 0xd9dbd9 : 0xf7f7f4, 0.0002, 0.0008)); // etiqueta
     P.push(box(0.014, 0.003, 0.0005, -0.003, 0.0225, 0.0732, 0x1f4fa8));                    // marca azul
     marks(P, 0, 0.0175, 0.0732, 0.018, 5, 0x4b4e52, 0.0008, 0.0024);

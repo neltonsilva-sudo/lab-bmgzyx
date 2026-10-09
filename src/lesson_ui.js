@@ -1,9 +1,9 @@
 // DONO: agente "aula-pratica". Segunda tela (tela cheia) com o painel KET-1030 funcional: cabos de teste, botoeiras,
 // medidores, multímetro, procedimento NR-10, roteiros com verificação automática, defeitos e relatório.
-import { createSim, fmtA } from './lesson_sim.js?v=20261009095432';
-import { getPanel, JACK_COL } from './lesson_panels.js?v=20261009095432';
-import { build3DBackground } from './lesson_bg3d.js?v=20261009095432';
-import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261009095432';
+import { createSim, fmtA } from './lesson_sim.js?v=20261009141848';
+import { getPanel, JACK_COL } from './lesson_panels.js?v=20261009141848';
+import { build3DBackground } from './lesson_bg3d.js?v=20261009141848';
+import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261009141848';
 
 const CABLE = { R: ['#d11f1f', '#7a0d0d', 'vermelho'], K: ['#202020', '#000', 'preto'], B: ['#1f56c9', '#0d2a6e', 'azul'], Y: ['#f0c419', '#8a6d05', 'amarelo'], W: ['#f2f2ee', '#8d8d86', 'branco'], G: ['#1f9a3c', '#0b4a1a', 'verde'] };
 const NS = 'http://www.w3.org/2000/svg';
@@ -218,45 +218,6 @@ export function createLessonScreen(opts = {}) {
     jackEls.set(j.id, g);
   }
 
-  // ---------- textos da face (vetoriais, nítidos em qualquer zoom) sem sobrepor bornes nem outros textos ----------
-  if (bg3d && bg3d.texts && bg3d.texts.length) {
-    const gT = el('g', { 'pointer-events': 'none', class: 'ftx' }, svg);
-    svg.insertBefore(gT, gW);
-    const jk = panel.jacks.filter((j) => !j.ext).map((j) => [j.x, j.y]);
-    const placed = [];
-    const ctx2 = document.createElement('canvas').getContext('2d');
-    const widthOf = (t, fs, w) => { ctx2.font = `${w} ${fs}px Arial, Helvetica, sans-serif`; return ctx2.measureText(t).width; };
-    const hitsJack = (x0, y0, x1, y1) => jk.some(([x, y]) => { const cx = Math.max(x0, Math.min(x, x1)), cy = Math.max(y0, Math.min(y, y1)); return (cx - x) ** 2 + (cy - y) ** 2 < 8.5 * 8.5; });
-    const hitsText = (x0, y0, x1, y1) => placed.some((r) => !(x1 < r[0] || x0 > r[2] || y1 < r[1] || y0 > r[3]));
-    // ocupação real (máscara 3D: componentes, bornes, fios, trilhos)
-    const hitsObj = (x0, y0, x1, y1) => { const B = bg3d; if (!B.occ) return false; const st = 1.6;
-      for (let y = y0; y <= y1; y += st) for (let x = x0; x <= x1; x += st) { const u = Math.round((x - B.VX) * B.k), v = Math.round((y - B.VY) * B.k); if (u >= 0 && v >= 0 && u < B.cw && v < B.ch && B.occ[v * B.cw + u]) return true; }
-      return false; };
-    // títulos e nomes grandes primeiro; rótulos curtos (bornes) depois
-    const list = [...bg3d.texts].sort((a, b) => (b.title - a.title) || (b.fs - a.fs));
-    let html = '';
-    for (const r of list) {
-      let fs = Math.max(r.fs * (r.t.length <= 3 ? 0.86 : 0.92), 7);
-      const wd = r.title ? Math.abs(r.x2 - r.x) : widthOf(r.t, fs, r.w);
-      const h = fs * 0.8;
-      if (r.title) { html += `<text x="${r.x.toFixed(1)}" y="${r.y.toFixed(1)}" dominant-baseline="central" textLength="${wd.toFixed(1)}" lengthAdjust="spacingAndGlyphs" font-size="${fs.toFixed(1)}" font-weight="600" fill="${r.color}" font-family="DIN Condensed, Arial Narrow, Arial, sans-serif">${esc(r.t)}</text>`; placed.push([r.x, r.y - h / 2, r.x + wd, r.y + h / 2]); continue; }
-      // posição original e alternativas próximas, a primeira livre vence
-      const cands = [[0, 0], [0, -6], [0, 6], [0, -10], [0, 10], [-wd / 2 - 9, 0], [wd / 2 + 9, 0], [0, -14], [0, 14], [-wd / 2 - 9, -7], [wd / 2 + 9, -7], [-wd / 2 - 9, 7], [wd / 2 + 9, 7], [wd / 2 + 11, 0], [-wd / 2 - 11, 0], [0, -18], [0, 18], [wd / 2 + 12, -10], [-wd / 2 - 12, -10], [wd / 2 + 12, 10], [-wd / 2 - 12, 10]];
-      let best = null;
-      for (let pass = 0; pass < 3 && !best; pass++) {
-        for (const [dx, dy] of cands) {
-          const cx = r.x + dx, cy = r.y + dy, x0 = cx - wd / 2 - 0.6, x1 = cx + wd / 2 + 0.6, y0 = cy - h / 2 - 0.4, y1 = cy + h / 2 + 0.4;
-          if (y1 < FH + 34 && x0 > 4 && x1 < FW - 4 && !hitsJack(x0, y0, x1, y1) && !hitsText(x0, y0, x1, y1) && !hitsObj(x0, y0, x1, y1)) { best = [cx, cy, x0, y0, x1, y1]; break; }
-        }
-        if (!best) { fs *= 0.86; }
-      }
-      if (!best) best = [r.x, r.y, r.x - wd / 2, r.y - h / 2, r.x + wd / 2, r.y + h / 2];
-      placed.push(best.slice(2));
-      html += `<text x="${best[0].toFixed(1)}" y="${best[1].toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="${fs.toFixed(1)}" font-weight="${r.w}" fill="${r.color}" font-family="Arial, Helvetica, sans-serif" paint-order="stroke" stroke="${/^#(f|e|d)/i.test(r.color) ? 'rgba(0,0,0,.55)' : 'rgba(255,250,225,.85)'}" stroke-width="${(fs * 0.14).toFixed(2)}">${esc(r.t)}</text>`;
-    }
-    gT.innerHTML = html;
-  }
-
   // ---------- widgets ----------
   const W = [];
   const lampColor = { R: ['#ff3b28', '#7d1a12'], G: ['#4dff6a', '#1d6b2a'], Y: ['#ffe03a', '#b89a14'] };
@@ -342,7 +303,7 @@ export function createLessonScreen(opts = {}) {
         <g class="knob"><rect x="-.8" y="-11.6" width="1.6" height="8.6" rx=".6" fill="#f4f4f4"/></g></g>`;
     } else if (w.type === 'K') {
       g.innerHTML = `<rect x="-34" y="-52" width="70" height="104" rx="4" fill="transparent"/><rect class="flag" x="12" y="-2" width="7" height="9" rx="1" fill="#d8dde1" stroke="rgba(0,0,0,.35)" stroke-width=".5" filter="url(#wShS)"/>
-        <rect class="ring" x="-34" y="-53" width="70" height="106" rx="6" fill="none" stroke="#2bd96b" stroke-width="4" opacity="0" filter="url(#wBl)"/><text class="bt" x="0" y="64" text-anchor="middle" font-size="8.5" font-weight="700" fill="#1a7f3c" font-family="Arial"></text>`;
+        <rect class="ring" x="-34" y="-53" width="70" height="106" rx="5" fill="none" stroke="#3dff7a" stroke-width="1.3" opacity="0" pointer-events="none" style="filter:drop-shadow(0 0 1.6px #2bd96b)"/><text class="bt" x="0" y="64" text-anchor="middle" font-size="8.5" font-weight="700" fill="#1a7f3c" font-family="Arial"></text>`;
     } else if (w.type === 'relay') {
       g.innerHTML = `<rect x="-18" y="-62" width="36" height="124" fill="transparent"/><circle class="lh" cx="-9" cy="-8" r="6" fill="#3dff6a" opacity="0" filter="url(#wBl)"/><circle class="led" cx="-9" cy="-8" r="2.4" fill="#2a3a2c" stroke="rgba(0,0,0,.5)" stroke-width=".5"/><circle cx="-9.7" cy="-8.8" r=".8" fill="#fff" opacity=".6"/><text class="tm" x="0" y="76" text-anchor="middle" font-size="8" font-weight="700" fill="#1f6fd1" font-family="Arial"></text>`;
     } else if (w.type === 'ctd') {
@@ -417,12 +378,119 @@ export function createLessonScreen(opts = {}) {
     }
   }
 
+  // ---------- obstáculos (bornes, peças 3D, widgets, textos já colocados) ----------
+  const jkAll = panel.jacks.filter((j) => !j.ext).map((j) => [j.x, j.y]);
+  const placed = [];
+  const ctx2 = document.createElement('canvas').getContext('2d');
+  const widthOf = (t, fs, w) => { ctx2.font = `${w} ${fs}px Arial, Helvetica, sans-serif`; return ctx2.measureText(t).width; };
+  const rectCirc = (x0, y0, x1, y1, x, y, r) => { const cx = Math.max(x0, Math.min(x, x1)), cy = Math.max(y0, Math.min(y, y1)); return (cx - x) ** 2 + (cy - y) ** 2 < r * r; };
+  const hitsJack = (x0, y0, x1, y1, r = 8.5) => jkAll.some(([x, y]) => rectCirc(x0, y0, x1, y1, x, y, r));
+  const hitsText = (x0, y0, x1, y1) => placed.some((q) => !(x1 < q[0] || x0 > q[2] || y1 < q[1] || y0 > q[3]));
+  // ocupação real (máscara 3D: componentes, bornes, fios, trilhos)
+  const hitsObj = (x0, y0, x1, y1) => { const B = bg3d; if (!B || !B.occ) return false; const st = 1.6;
+    for (let y = y0; y <= y1; y += st) for (let x = x0; x <= x1; x += st) { const u = Math.round((x - B.VX) * B.k), v = Math.round((y - B.VY) * B.k); if (u >= 0 && v >= 0 && u < B.cw && v < B.ch && B.occ[v * B.cw + u]) return true; }
+    return false; };
+  // contorno aproximado dos widgets SVG (que podem extrapolar a peça 3D): círculos [x,y,r] e retângulos
+  const wCirc = [], wRect = [];
+  for (const w of W) {
+    const [ax, ay] = ALN[w.dev || w.src] || [0, 0];
+    if (w.type === 'lamp') wCirc.push([w.x + ax, w.y + ay, 15.5 * (w.s || 1)]);
+    else if (w.type === 'btn' || w.type === 'sel') wCirc.push([w.x + ax, w.y + ay, 15.5 * (w.r || 1)]);
+    else if (w.type === 'key') { const kx = w.x + 32.7, ky = w.y - 3.9; wCirc.push([kx, ky, 13.5], [kx, ky - 14.5, 7.5]); wRect.push([kx - 2.5, ky + 4, kx + 18.6, ky + 32]); }
+    else if (w.type === 'motorMount' && bg3d && bg3d.fan) wCirc.push([bg3d.fan.x, bg3d.fan.y, bg3d.fan.r + 1]);
+  }
+  const hitsWid = (x0, y0, x1, y1) => wCirc.some(([x, y, r]) => rectCirc(x0, y0, x1, y1, x, y, r)) || wRect.some((q) => !(x1 < q[0] || x0 > q[2] || y1 < q[1] || y0 > q[3]));
+  // textos ficam ACIMA dos cabos (legíveis), sem capturar cliques
+  const gT = el('g', { 'pointer-events': 'none', class: 'ftx' }, svg);
+  svg.insertBefore(gT, gN);
+  const halo = (c) => (/^#(f|e|d)/i.test(c) ? 'rgba(0,0,0,.6)' : 'rgba(255,250,225,.95)');
+
+  // ---------- textos da face (vetoriais, nítidos em qualquer zoom) sem sobrepor bornes, peças, widgets nem outros textos ----------
+  if (bg3d && bg3d.texts && bg3d.texts.length) {
+    // títulos e nomes grandes primeiro; rótulos curtos (bornes) depois
+    const list = [...bg3d.texts].sort((a, b) => (b.title - a.title) || (b.fs - a.fs));
+    let html = '';
+    for (const r of list) {
+      let fs = Math.max(r.fs * (r.t.length <= 3 ? 0.86 : 0.92), 7);
+      const wd = r.title ? Math.abs(r.x2 - r.x) : widthOf(r.t, fs, r.w);
+      const h = fs * 0.8;
+      if (r.title) { html += `<text x="${r.x.toFixed(1)}" y="${r.y.toFixed(1)}" dominant-baseline="central" textLength="${wd.toFixed(1)}" lengthAdjust="spacingAndGlyphs" font-size="${fs.toFixed(1)}" font-weight="600" fill="${r.color}" font-family="DIN Condensed, Arial Narrow, Arial, sans-serif" paint-order="stroke" stroke="${halo(r.color)}" stroke-width="${(fs * 0.08).toFixed(2)}" stroke-linejoin="round">${esc(r.t)}</text>`; placed.push([r.x, r.y - h / 2, r.x + wd, r.y + h / 2]); continue; }
+      // posição original e alternativas próximas, a primeira livre vence
+      const cands = [[0, 0], [0, -6], [0, 6], [0, -10], [0, 10], [-wd / 2 - 9, 0], [wd / 2 + 9, 0], [0, -14], [0, 14], [-wd / 2 - 9, -7], [wd / 2 + 9, -7], [-wd / 2 - 9, 7], [wd / 2 + 9, 7], [wd / 2 + 11, 0], [-wd / 2 - 11, 0], [0, -18], [0, 18], [wd / 2 + 12, -10], [-wd / 2 - 12, -10], [wd / 2 + 12, 10], [-wd / 2 - 12, 10]];
+      let best = null;
+      for (let pass = 0; pass < 3 && !best; pass++) {
+        for (const [dx, dy] of cands) {
+          const cx = r.x + dx, cy = r.y + dy, x0 = cx - wd / 2 - 0.6, x1 = cx + wd / 2 + 0.6, y0 = cy - h / 2 - 0.4, y1 = cy + h / 2 + 0.4;
+          if (y1 < FH + 34 && x0 > 4 && x1 < FW - 4 && !hitsJack(x0, y0, x1, y1) && !hitsText(x0, y0, x1, y1) && !hitsObj(x0, y0, x1, y1) && !hitsWid(x0, y0, x1, y1)) { best = [cx, cy, x0, y0, x1, y1]; break; }
+        }
+        if (!best) { fs *= 0.86; }
+      }
+      if (!best) best = [r.x, r.y, r.x - wd / 2, r.y - h / 2, r.x + wd / 2, r.y + h / 2];
+      placed.push(best.slice(2));
+      html += `<text x="${best[0].toFixed(1)}" y="${best[1].toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="${fs.toFixed(1)}" font-weight="${r.w}" fill="${r.color}" font-family="Arial, Helvetica, sans-serif" paint-order="stroke" stroke="${halo(r.color)}" stroke-width="${(fs * 0.24).toFixed(2)}" stroke-linejoin="round">${esc(r.t)}</text>`;
+    }
+    gT.innerHTML = html;
+  }
+
+  // ---------- etiquetas de estado dos widgets (LIGADO, I · LIGADO, LIGADA, temporizações, rpm) ----------
+  // ficam na camada de textos (acima dos cabos) e são posicionadas em espaço livre perto da peça
+  {
+    const gL = el('g', { 'pointer-events': 'none', class: 'wtx' }, gT);
+    const LBL = { K: ['.bt', 'LIGADO'], relay: ['.tm', '10.0/10 s'], mainBreaker: ['.st', 'O · DESLIGADO'], dr: ['.st', 'DR ATUADO'], key: ['.kt', 'chave retirada'], motorMount: ['.rpm', '1736 rpm ↻'] };
+    // anéis de busca: primeiro abaixo, depois laterais, depois acima
+    const ANG = [90, 60, 120, 30, 150, 0, 180, 45, 135, 15, 165, 270, 240, 300, 210, 330].map((a) => (a * Math.PI) / 180);
+    for (const w of W) {
+      const spec = LBL[w.type]; if (!spec) continue;
+      const t = w.g.querySelector(spec[0]); if (!t) continue;
+      // posição absoluta original do texto
+      let ox = +t.getAttribute('x'), oy = +t.getAttribute('y');
+      const inner = t.parentNode !== w.g ? t.parentNode.getAttribute('transform') : '';
+      const tm = /translate\(([-\d.]+),\s*([-\d.]+)\)/.exec(inner || ''); if (tm) { ox += +tm[1]; oy += +tm[2]; }
+      const gx = /translate\(([-\d.]+),\s*([-\d.]+)\)/.exec(w.g.getAttribute('transform') || '') || [0, w.x, w.y];
+      const bx = +gx[1], by = +gx[2];
+      const fs = +t.getAttribute('font-size') || 8.5, wt = t.getAttribute('font-weight') || 700;
+      const wd = widthOf(spec[1], fs, wt), h = fs * 0.85;
+      // ponto de partida: perto do texto original, mas só um pouco afastado da peça
+      const isK = w.type === 'key', sx = isK ? bx + 32.7 - 17 - wd / 2 : bx + ox * 0.85, sy = isK ? by - 3.9 : by + oy * 0.85;
+      let best = null;
+      for (let rr = 0; rr <= 120 && !best; rr += 4) {
+        for (const a of rr ? ANG : [0]) {
+          const cx = sx + Math.cos(a) * rr * 1.3, cy = sy + Math.sin(a) * rr, mg = 4;
+          const x0 = cx - wd / 2 - mg, x1 = cx + wd / 2 + mg, y0 = cy - h / 2 - mg, y1 = cy + h / 2 + mg;
+          if (x0 > 8 && x1 < FW - 8 && y0 > 8 && y1 < FH - 6 && !hitsJack(x0, y0, x1, y1, 11) && !hitsText(x0, y0, x1, y1) && !hitsObj(x0, y0, x1, y1) && !hitsWid(x0, y0, x1, y1)) { best = [cx, cy, x0, y0, x1, y1]; break; }
+        }
+      }
+      if (!best) best = [bx + ox, by + oy, bx + ox - wd / 2, by + oy - h / 2, bx + ox + wd / 2, by + oy + h / 2];
+      placed.push(best.slice(2));
+      w.gt = el('g', {}, gL);
+      t.setAttribute('x', best[0].toFixed(1)); t.setAttribute('y', best[1].toFixed(1));
+      t.setAttribute('text-anchor', 'middle'); t.setAttribute('dominant-baseline', 'central');
+      t.setAttribute('paint-order', 'stroke'); t.setAttribute('stroke', 'rgba(255,250,225,.95)'); t.setAttribute('stroke-width', (fs * 0.24).toFixed(2)); t.setAttribute('stroke-linejoin', 'round');
+      w.gt.appendChild(t);
+    }
+  }
   // ---------- cabos ----------
   const rnd = (i) => { const x = Math.sin(i * 127.1 + 31.7) * 43758.5453; return x - Math.floor(x); };
   function stackIndex() {
     const m = new Map(), idx = new Map();
     for (const w of sim.wires) for (const end of ['ja', 'jb']) { const j = w[end]; const k = m.get(j) || 0; idx.set(w.id + end, k); m.set(j, k + 1); }
     return idx;
+  }
+  // empilhamento de plugues no mesmo borne: desloca pouco e para o lado mais livre (longe de bornes vizinhos e widgets)
+  const stackDirs = new Map();
+  function stackDir(j) {
+    let d = stackDirs.get(j.id); if (d) return d;
+    const obs = jkAll.map(([x, y]) => [x, y, 1]).concat(wCirc.map(([x, y, r]) => [x, y, r / 9]));
+    let best = [0.7071, -0.7071], bs = -1;
+    for (let i = 0; i < 16; i++) {
+      const a = (i * Math.PI) / 8, ux = Math.cos(a), uy = Math.sin(a);
+      // ponto de teste ~1 raio de plugue à frente; pontuação = folga mínima até obstáculos (preferindo cima/direita em empate)
+      const px = j.x + ux * 9, py = j.y + uy * 9;
+      let mn = 1e9; for (const [x, y, w] of obs) { if (Math.abs(x - j.x) < 0.5 && Math.abs(y - j.y) < 0.5) continue; mn = Math.min(mn, Math.hypot(px - x, py - y) / w); }
+      const sc = Math.min(mn, 40) + (ux - uy) * 0.4 - (uy > 0.5 ? 3 : 0);
+      if (sc > bs) { bs = sc; best = [ux, uy]; }
+    }
+    stackDirs.set(j.id, best); return best;
   }
   function cablePath(p1, p2, seed) {
     const dx = p2[0] - p1[0], dy = p2[1] - p1[1], d = Math.hypot(dx, dy);
@@ -455,7 +523,8 @@ export function createLessonScreen(opts = {}) {
     for (const w of sim.wires) {
       const A = jackById.get(w.ja), B = jackById.get(w.jb); if (!A || !B) continue;
       const ka = idx.get(w.id + 'ja'), kb = idx.get(w.id + 'jb');
-      const pa = [SX(A.x) + ka * 4.5, SY(A.y) - ka * 4.5], pb = [SX(B.x) + kb * 4.5, SY(B.y) - kb * 4.5];
+      const da = stackDir(A), db = stackDir(B), ST = 3.2;
+      const pa = [SX(A.x) + da[0] * ka * ST, SY(A.y) + da[1] * ka * ST], pb = [SX(B.x) + db[0] * kb * ST, SY(B.y) + db[1] * kb * ST];
       const [c, dk] = CABLE[w.color] || CABLE.R;
       // direção de saída do cabo em cada pino = tangente da curva; o cabo começa na ponta do alívio de tração
       const ddx = pb[0] - pa[0], dd = Math.hypot(ddx, pb[1] - pa[1]), sag = 18 + dd * (0.2 + 0.08 * rnd(w.id));
@@ -972,7 +1041,7 @@ export function createLessonScreen(opts = {}) {
   function updateWidgets() {
     const e = energized();
     for (const w of W) {
-      const d = w.dev && sim.dev(w.dev), g = w.g;
+      const d = w.dev && sim.dev(w.dev), g = w.g, Q = (sel) => g.querySelector(sel) || (w.gt && w.gt.querySelector(sel));
       if (w.type === 'lamp') {
         const on = w.src === 'ENERG' ? e : !!(d && d.st.lit);
         g.querySelector('.dome').setAttribute('fill', on ? w.on : w.off); g.querySelector('.glow').setAttribute('opacity', on ? 1 : 0); g.querySelector('.core').setAttribute('opacity', on ? 0.85 : 0);
@@ -981,11 +1050,11 @@ export function createLessonScreen(opts = {}) {
       else if (w.type === 'sel') g.querySelectorAll('.knob').forEach((k) => k.setAttribute('transform', `rotate(${d.st.pos ? 40 : -40})`));
       else if (w.type === 'K') {
         const on = !!d.st.on; g.querySelector('.flag').setAttribute('y', on ? 8 : -2); g.querySelector('.flag').setAttribute('fill', on ? '#1a9c4a' : '#d8dde1');
-        g.querySelector('.ring').setAttribute('opacity', on ? 0.9 : 0); g.querySelector('.bt').textContent = on ? 'LIGADO' : '';
+        g.querySelector('.ring').setAttribute('opacity', on ? 0.9 : 0); Q('.bt').textContent = on ? 'LIGADO' : '';
       } else if (w.type === 'relay' && d) {
         const on = d.type === 'phaseMon' ? d.st.ok : d.type === 'rca' ? d.st.on && !d.st.trip : d.st.on;
         const lc = d.type === 'rca' && d.st.trip ? '#ff3b28' : on ? '#3dff6a' : '#2a3a2c'; g.querySelector('.led').setAttribute('fill', lc); g.querySelector('.lh').setAttribute('fill', lc); g.querySelector('.lh').setAttribute('opacity', lc === '#2a3a2c' ? 0 : 0.8);
-        const tm = g.querySelector('.tm'); tm.textContent = (d.type === 'timerOn' || d.type === 'ydRelay') && d.st.on ? `${num(Math.min(d.st.t, d.st.T), 1)}/${d.st.T} s` : d.type === 'rca' && d.st.trip ? 'ATUADO' : '';
+        const tm = Q('.tm'); tm.textContent = (d.type === 'timerOn' || d.type === 'ydRelay') && d.st.on ? `${num(Math.min(d.st.t, d.st.T), 1)}/${d.st.T} s` : d.type === 'rca' && d.st.trip ? 'ATUADO' : '';
       } else if (w.type === 'ctd') {
         g.querySelector('.v').textContent = d.st.on ? Math.min(d.st.t, d.st.T).toFixed(1) : '0.0'; g.querySelector('.v').setAttribute('opacity', d.st.on ? 1 : 0);
         g.querySelector('.sv').textContent = `SP ${d.st.T.toFixed(1)}s${d.st.on && d.st.t >= d.st.T ? ' OUT1' : ''}`; g.querySelector('.sv').setAttribute('opacity', d.st.on ? 1 : 0);
@@ -993,14 +1062,14 @@ export function createLessonScreen(opts = {}) {
         const trip = sim.mainTrip && sim.tripBy !== 'DR', pos = trip ? 'm' : X.qf ? 'u' : 'd';
         g.querySelectorAll('.lev').forEach((l) => l.setAttribute('opacity', l.dataset.s === pos ? 1 : 0));
         g.querySelectorAll('.fl').forEach((f) => f.setAttribute('fill', pos === 'u' ? '#e0281c' : '#1f9a4a'));
-        const t = g.querySelector('.st'); t.textContent = trip ? 'DESARMADO' : X.qf ? 'I · LIGADO' : 'O · DESLIGADO'; t.setAttribute('fill', trip ? '#c62828' : X.qf ? '#c62828' : '#1a7f3c');
+        const t = Q('.st'); t.textContent = trip ? 'DESARMADO' : X.qf ? 'I · LIGADO' : 'O · DESLIGADO'; t.setAttribute('fill', trip ? '#c62828' : X.qf ? '#c62828' : '#1a7f3c');
         g.querySelector('.lock').setAttribute('opacity', X.nr.loto ? 1 : 0);
       } else if (w.type === 'key') {
         g.querySelector('.kb').setAttribute('opacity', X.nr.loto ? 0 : 1); g.querySelector('.tag').setAttribute('opacity', X.nr.loto ? 0 : 1);
-        g.querySelector('.kb').setAttribute('transform', X.key ? 'rotate(60)' : ''); const kt = g.querySelector('.kt'); kt.textContent = X.nr.loto ? 'chave retirada' : X.key ? 'LIGADA' : ''; kt.setAttribute('fill', X.nr.loto ? '#b26a00' : '#1a7f3c');
+        g.querySelector('.kb').setAttribute('transform', X.key ? 'rotate(60)' : ''); const kt = Q('.kt'); kt.textContent = X.nr.loto ? 'chave retirada' : X.key ? 'LIGADA' : ''; kt.setAttribute('fill', X.nr.loto ? '#b26a00' : '#1a7f3c');
       } else if (w.type === 'dr') {
         const trip = sim.mainTrip && sim.tripBy === 'DR', pos = !trip && X.qf ? 'u' : 'd'; g.querySelectorAll('.lev').forEach((l) => l.setAttribute('opacity', l.dataset.s === pos ? 1 : 0)); g.querySelector('.fl').setAttribute('fill', pos === 'u' ? '#e0281c' : '#1f9a4a');
-        const t = g.querySelector('.st'); t.textContent = trip ? 'DR ATUADO' : ''; t.setAttribute('fill', '#c62828');
+        const t = Q('.st'); t.textContent = trip ? 'DR ATUADO' : ''; t.setAttribute('fill', '#c62828');
       } else if (w.type === 'gst') {
         const G = sim.gst, live = G.on && !G.fault;
         ['R', 'S', 'T'].forEach((p) => g.querySelector('.gv' + p).textContent = live && G.loss !== p ? String(G.V) : '0');
@@ -1008,7 +1077,7 @@ export function createLessonScreen(opts = {}) {
         g.querySelector('.gled').setAttribute('fill', live ? '#ff3b28' : '#3a2a2a');
       } else if (w.type === 'motorMount') {
         const rpm = sim.dev(R.M).st.rpm || 0;
-        g.querySelector('.rpm').textContent = Math.abs(rpm) < 5 ? 'parado' : `${Math.round(Math.abs(rpm))} rpm ${rpm > 0 ? '↻' : '↺'}`;
+        Q('.rpm').textContent = Math.abs(rpm) < 5 ? 'parado' : `${Math.round(Math.abs(rpm))} rpm ${rpm > 0 ? '↻' : '↺'}`;
       } else if (w.type === 'motorArea') { const m = sim.dev(R.M).st; const v = m.Vw ? Math.max(...m.Vw) : 0; g.querySelector('.glow').setAttribute('opacity', Math.min(0.32, v / 380 * 0.32)); }
     }
     if (dlgDiag) {

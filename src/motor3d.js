@@ -8,8 +8,10 @@ export function buildMotor3D(ctx) {
   if (!f) return null;
   const hole = f.layoutToFace((810 - 510) * 0.0018602, (718 - 533) * 0.0016034); // furo do painel (benches_layouts)
   const root = new THREE.Group(); root.name = 'motorM1';
-  const sc = (f.width / 1.1) * 0.72; // escala relativa à face (~1,1 m), reduzido a pedido
-  root.position.set(hole.x + 0.085 * sc + 0.012, hole.y, 0); root.scale.setScalar(sc);
+  // montado pelo flange no furo do painel, eixo saindo para a frente (vista frontal = tampa + disco estroboscópico
+  // coaxial na ponta do eixo). Escala ~60% da versão anterior; fica à direita do sensor indutivo, sem cobri-lo.
+  const sc = (f.width / 1.1) * 0.72 * 0.68;
+  root.position.set(hole.x, hole.y, 0); root.scale.setScalar(sc);
   f.face.add(root);
 
   const M = {
@@ -19,41 +21,52 @@ export function buildMotor3D(ctx) {
     yel: new THREE.MeshStandardMaterial({ color: 0xe8b714, metalness: 0.2, roughness: 0.45 }),
     lite: new THREE.MeshStandardMaterial({ color: 0xd9dde1, metalness: 0.2, roughness: 0.45 }),
   };
-  const R = 0.05, Lb = 0.15, z0 = R + 0.012; // raio da carcaça, comprimento, afastamento da face
-  // carcaça (eixo ao longo de x) com aletas
-  const housing = new THREE.Mesh(new THREE.CylinderGeometry(R, R, Lb, 40), M.body); housing.rotation.z = Math.PI / 2; housing.position.z = z0; root.add(housing);
-  for (let i = 0; i < 16; i++) {
-    const a = (i / 16) * Math.PI * 2, fin = new THREE.Mesh(new THREE.BoxGeometry(Lb * 0.92, 0.006, 0.012), M.body);
-    fin.position.set(0, Math.sin(a) * (R + 0.004), z0 + Math.cos(a) * (R + 0.004)); fin.rotation.x = -a; root.add(fin);
+  const R = 0.05, Lb = 0.13, zf = 0.008; // raio da carcaça, comprimento (ao longo de z), espessura do flange
+  const cylZ = (r, len, z, m, seg = 40, r2) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(r2 ?? r, r, len, seg), m); c.rotation.x = Math.PI / 2; c.position.z = z; root.add(c); return c; };
+  // flange quadrado preso à face com 4 parafusos
+  const fl = new THREE.Mesh(new THREE.BoxGeometry(0.118, 0.118, zf), M.dark); fl.position.z = zf / 2; root.add(fl);
+  for (const [x, y] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) { const s2 = new THREE.Mesh(new THREE.CylinderGeometry(0.0055, 0.0055, 0.004, 12), M.steel); s2.rotation.x = Math.PI / 2; s2.position.set(x * 0.046, y * 0.046, zf + 0.002); root.add(s2); }
+  // carcaça aletada (eixo z)
+  const housing = cylZ(R, Lb, zf + Lb / 2, M.body);
+  for (let i = 0; i < 20; i++) {
+    const a = (i / 20) * Math.PI * 2, fin = new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.012, Lb * 0.9), M.body);
+    fin.position.set(Math.cos(a) * (R + 0.004), Math.sin(a) * (R + 0.004), zf + Lb / 2); fin.rotation.z = a + Math.PI / 2; root.add(fin);
   }
-  // tampas, tampa do ventilador (traseira, à direita) e pés/suporte preso à face
-  const bell = (x, rr, len, m) => { const b = new THREE.Mesh(new THREE.CylinderGeometry(rr, rr, len, 36), m); b.rotation.z = Math.PI / 2; b.position.set(x, 0, z0); root.add(b); return b; };
-  bell(-Lb / 2 - 0.006, R * 0.92, 0.012, M.dark); bell(Lb / 2 + 0.022, R * 0.98, 0.044, M.dark);
-  const grill = new THREE.Mesh(new THREE.CircleGeometry(R * 0.8, 32), new THREE.MeshStandardMaterial({ color: 0x14181b, roughness: 0.9 }));
-  grill.rotation.y = Math.PI / 2; grill.position.set(Lb / 2 + 0.0445, 0, z0); root.add(grill);
-  const plate = new THREE.Mesh(new THREE.BoxGeometry(Lb * 0.9, 0.012, z0 * 0.95), M.dark); plate.position.set(0, -R - 0.004, z0 / 2); root.add(plate);
-  const base = new THREE.Mesh(new THREE.BoxGeometry(Lb * 1.05, R * 2.3, 0.006), M.dark); base.position.set(0, -0.004, 0.003); root.add(base);
-  // caixa de ligação (6 bornes) no topo e placa de identificação
-  const tb = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.026, 0.04), M.body); tb.position.set(-0.01, R + 0.016, z0); root.add(tb);
-  const c = document.createElement('canvas'); c.width = 256; c.height = 128; const g = c.getContext('2d');
-  g.fillStyle = '#e3e6e9'; g.fillRect(0, 0, 256, 128); g.strokeStyle = '#6c7680'; g.lineWidth = 4; g.strokeRect(2, 2, 252, 124);
-  g.fillStyle = '#1e2a3a'; g.font = '700 22px Arial'; g.fillText('MOTOR 3~  M1', 14, 30);
-  g.font = '600 17px Arial'; ['0,5 cv  0,37 kW  4 polos', '380 Δ / 660 Y V   1,05 A', '1720 rpm  60 Hz  IP55'].forEach((t, i) => g.fillText(t, 14, 58 + i * 24));
-  const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace;
-  const np = new THREE.Mesh(new THREE.PlaneGeometry(0.062, 0.031), new THREE.MeshStandardMaterial({ map: tx, roughness: 0.4, metalness: 0.3 }));
-  np.position.set(0.0, 0.004, z0 + R + 0.0062); root.add(np);
-  // eixo e disco de acoplamento (setores amarelo/cinza) saindo pelo lado do furo — é ele que gira
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.04, 16), M.steel); shaft.rotation.z = Math.PI / 2; shaft.position.set(-Lb / 2 - 0.03, 0, z0); root.add(shaft);
-  // disco estroboscópico de frente (como na foto): fundo creme com anéis em zigue-zague pretos — girando dá para ver
-  const rot = new THREE.Group(); rot.position.set(-Lb / 2 - 0.03, 0, z0 + 0.012); root.add(rot);
+  // tampa dianteira (escura), mancal e eixo
+  const zb = zf + Lb;
+  cylZ(R * 0.97, 0.01, zb + 0.005, M.dark); cylZ(R * 0.55, 0.008, zb + 0.014, M.dark, 32, R * 0.62);
+  cylZ(0.014, 0.008, zb + 0.022, M.steel, 24);
+  const shaft = cylZ(0.007, 0.03, zb + 0.036, M.steel, 16);
+  // caixa de ligação no topo (com tampa) e prensa-cabo
+  const tb = new THREE.Mesh(new THREE.BoxGeometry(0.046, 0.026, 0.052), M.body); tb.position.set(0, R + 0.013, zf + Lb * 0.55); root.add(tb);
+  const tbl = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.004, 0.056), M.dark); tbl.position.set(0, R + 0.028, zf + Lb * 0.55); root.add(tbl);
+  const gl = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.012, 12), M.dark); gl.rotation.z = Math.PI / 2; gl.position.set(0.029, R + 0.012, zf + Lb * 0.55); root.add(gl);
+  // plaqueta de identificação (grande, legível) num suporte ao lado do motor, de frente para quem olha o painel
+  const c = document.createElement('canvas'); c.width = 640; c.height = 320; const g = c.getContext('2d');
+  const gp = g.createLinearGradient(0, 0, 0, 320); gp.addColorStop(0, '#eef1f3'); gp.addColorStop(1, '#c9cfd4'); g.fillStyle = gp; g.fillRect(0, 0, 640, 320);
+  g.strokeStyle = '#4c5864'; g.lineWidth = 10; g.strokeRect(5, 5, 630, 310);
+  g.fillStyle = '#1e2a3a'; g.fillRect(5, 5, 630, 84); g.fillStyle = '#f2f4f6'; g.font = '800 64px Arial'; g.fillText('MOTOR 3~ M1', 24, 70, 592);
+  g.fillStyle = '#101820'; g.font = '800 60px Arial';
+  ['0,5 cv  380Δ/660Y V', '1,05 A  1720 rpm', '60 Hz  IP55  4 polos'].forEach((t, i) => g.fillText(t, 24, 150 + i * 70, 592));
+  for (const [x, y] of [[22, 296], [618, 296]]) { g.beginPath(); g.arc(x, y, 8, 0, 7); g.fillStyle = '#8a949c'; g.fill(); }
+  const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 8;
+  const pw = 0.16, ph = 0.08, pxc = 0.06 + 0.03 + pw / 2;
+  const bk = new THREE.Mesh(new THREE.BoxGeometry(pw + 0.006, ph + 0.006, 0.004), M.dark); bk.position.set(pxc, 0, 0.002); root.add(bk);
+  const np = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), new THREE.MeshStandardMaterial({ map: tx, roughness: 0.45, metalness: 0.25 }));
+  np.position.set(pxc, 0, 0.0042); root.add(np);
+  // disco estroboscópico preso na ponta do eixo (coaxial), de frente — é ele que gira
+  const rot = new THREE.Group(); rot.position.set(0, 0, zb + 0.052); root.add(rot);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.01, 20), M.steel); hub.rotation.x = Math.PI / 2; hub.position.z = -0.005; rot.add(hub);
   const dc = document.createElement('canvas'); dc.width = dc.height = 512; const dg = dc.getContext('2d');
   const star = (n, r1, r2, off, fill) => { dg.beginPath(); for (let i = 0; i < n * 2; i++) { const a = off + (i * Math.PI) / n, r = i % 2 ? r2 : r1; dg.lineTo(256 + Math.cos(a) * r, 256 + Math.sin(a) * r); } dg.closePath(); dg.fillStyle = fill; dg.fill(); };
   dg.beginPath(); dg.arc(256, 256, 252, 0, 7); dg.fillStyle = '#efe4c4'; dg.fill(); dg.lineWidth = 6; dg.strokeStyle = '#c9b98e'; dg.stroke();
   star(24, 226, 176, 0, '#111'); star(24, 196, 150, Math.PI / 24, '#efe4c4'); star(18, 150, 104, 0, '#111'); star(18, 122, 82, Math.PI / 18, '#efe4c4');
-  star(12, 84, 50, 0, '#111'); star(12, 60, 34, Math.PI / 12, '#efe4c4'); dg.beginPath(); dg.arc(256, 256, 16, 0, 7); dg.fillStyle = '#9a8f74'; dg.fill();
+  star(12, 84, 50, 0, '#111'); star(12, 60, 34, Math.PI / 12, '#efe4c4'); dg.beginPath(); dg.arc(256, 256, 22, 0, 7); dg.fillStyle = '#9aa1a8'; dg.fill();
+  dg.beginPath(); dg.arc(256, 256, 8, 0, 7); dg.fillStyle = '#333'; dg.fill();
   const dtx = new THREE.CanvasTexture(dc); dtx.colorSpace = THREE.SRGBColorSpace; dtx.anisotropy = 4;
   const disc = new THREE.Mesh(new THREE.CircleGeometry(0.032, 48), new THREE.MeshStandardMaterial({ map: dtx, roughness: 0.6, metalness: 0.05 }));
   rot.add(disc);
+  const discBack = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.003, 48), M.dark); discBack.rotation.x = Math.PI / 2; discBack.position.z = -0.0016; rot.add(discBack);
   const blur = new THREE.Mesh(new THREE.CircleGeometry(0.0322, 48), new THREE.MeshBasicMaterial({ color: 0x8a8370, transparent: true, opacity: 0 })); blur.position.z = 0.0005; rot.add(blur);
   root.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 
@@ -91,7 +104,7 @@ export function buildMotor3D(ctx) {
     ang += spd * dt;
     rot.rotation.z = ang;
     blur.material.opacity = Math.min(1, Math.abs(spd) / 10) * 0.12;
-    housing.position.y = Math.abs(rpm) > 50 ? (Math.random() - 0.5) * 0.0004 : 0; // leve vibração ligado
+    housing.position.y = Math.abs(rpm) > 50 ? (Math.random() - 0.5) * 0.0004 : 0; shaft.rotation.y = ang; // leve vibração ligado
   }
   return { group: root, update, contactorsOn, hotspot: { id: 'm1', titulo: 'Motor M1 · KET-1030', obj: root,
     info: 'Motor de indução trifásico de 6 pontas (U1-V2-W3 / X4-Y5-Z6). <b>0,5 cv (0,37 kW), 4 polos, 380 V Δ / 660 V Y, 1,05 A em 380 V, 1720 rpm, 60 Hz, IP55.</b> Na rede de 380 V: triângulo (U1-Z6, V2-X4, W3-Y5) para regime e estrela (X4-Y5-Z6 curto-circuitados) na partida estrela-triângulo. Gira quando o circuito montado na Aula Prática é energizado.<br><small>Especificação adotada: o manual do KET-1030 não está disponível publicamente.</small>' } };

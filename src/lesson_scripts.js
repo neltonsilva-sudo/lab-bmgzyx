@@ -1,7 +1,7 @@
 // DONO: agente "aula-pratica". Roteiros de aula prática no KET-1030 real (contatores K1–K5 com um NA, CH1/CH2, SN1,
 // seletora CH5, RAX-02, RYD-01, TCS-01, CTD, RCA, RST-21): objetivo, passos, diagramas, verificação automática
 // (topológica + ensaio funcional num clone do simulador) com feedback específico e defeitos injetáveis.
-import * as D from './lesson_diagrams.js?v=20261009095432';
+import * as D from './lesson_diagrams.js?v=20261009141848';
 
 export function makeCtx(sim, panel) {
   const uf = sim.staticNet(), r = panel.roles, bus = panel.bus;

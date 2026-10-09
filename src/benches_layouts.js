@@ -1,7 +1,7 @@
 // DONO: agente "bancadas". Layout de cada painel didático, reproduzido a partir de refs/foto1_full.jpg (recortes).
 // Coordenadas da face em metros: x ∈ [-0.865, 0.865] (esq→dir para quem olha o painel), y ∈ [-0.465, 0.465].
 // A API "A" pinta a serigrafia no canvas e instancia as peças 3D nos mesmos pontos (ver benches.js).
-import { paintYellowBg, paintWhiteBg, paintB1Bg, rng } from './benches_tex.js?v=20261009095432';
+import { paintYellowBg, paintWhiteBg, paintB1Bg, rng } from './benches_tex.js?v=20261009141848';
 
 export const TITLES = {
   b1: 'KET-1030: Proteção', b2: 'KET 1070: Industrial', b3: 'KET-1050: Proteção', b4: 'KET-1050: Proteção', b5: 'KET-1020: Comandos Elétricos',
@@ -18,19 +18,18 @@ function b1(A) {
   const L = (t, px, py, s = 0.0135, o = {}) => { TP.text(t, X(px), Y(py), s, { weight: 700, color: '#222', ...o }); if (A.texts) A.texts.push({ t, x: X(px), y: Y(py), s, w: o.weight || 700, color: o.color || '#222' }); };
   const J = (px, py, c = 'K', tag) => A.jack(X(px), Y(py), c, undefined, tag);
   const row = (xs, py, cols, labs, ly) => xs.forEach((x, i) => { J(x, py, cols[i], labs && labs[i]); if (labs && labs[i]) L(labs[i], x, ly ?? py - 10, 0.0125); });
-  // título sobre etiqueta clara
-  g.save(); g.fillStyle = 'rgba(255,255,248,0.55)'; g.fillRect(P.X(X(116)), P.Y(Y(440)), P.S(X(360) - X(116)), P.S(Y(440) - Y(469))); g.restore();
-  TP.text('KET-1030: Proteção', X(123), Y(455), 0.046, { align: 'left', weight: 600, color: '#242424', w: X(353) - X(123), font: '"DIN Condensed","Arial Narrow",Arial,sans-serif' });
-  if (A.texts) A.texts.push({ t: 'KET-1030: Proteção', x: X(123), y: Y(455), s: 0.046, w: 600, color: '#242424', title: true, x2: X(353) });
+  // título (≈55% do anterior, direto na face — sem etiqueta clara)
+  TP.text('KET-1030: Proteção', X(123), Y(452), 0.0253, { align: 'left', weight: 600, color: '#242424', w: X(250) - X(123), font: '"DIN Condensed","Arial Narrow",Arial,sans-serif' });
+  if (A.texts) A.texts.push({ t: 'KET-1030: Proteção', x: X(123), y: Y(452), s: 0.0253, w: 600, color: '#242424', title: true, x2: X(250) });
   // fitas crepe (marcas de uso)
   for (const [x, y, w, h, a] of []) { // removidas a pedido
     g.save(); g.translate(P.X(X(x)), P.Y(Y(y))); g.rotate(a); g.fillStyle = 'rgba(214,196,160,0.85)'; g.fillRect(-P.S(w * 0.00186) / 2, -P.S(h * 0.0016) / 2, P.S(w * 0.00186), P.S(h * 0.0016)); g.restore();
   }
   // coluna de comando
   L('ENERGIZADO', 82, 480, 0.0145); A.lamp(X(84), Y(502), 'R', null, 0.45, true);
-  L('LIGA', 85, 533); A.btn(X(88), Y(559), 'G', null, 1.35); L('CH1', 64, 558, 0.011); J(114, 550); J(115, 568);
-  L('DESL', 89, 589); A.btn(X(91), Y(611), 'R', null, 1.35); L('CH2', 66, 610, 0.011); J(117, 601); J(119, 619);
-  L('SN1', 64, 655, 0.011); L('(220Vca)', 64, 663, 0.010); A.lamp(X(95), Y(662), 'Y', null, 1.35, false); J(121, 653); J(123, 670);
+  L('LIGA', 85, 533); A.btn(X(88), Y(559), 'G', null, 1.35); L('CH1', 64, 558, 0.011); J(118, 550); J(119, 568);
+  L('DESL', 89, 589); A.btn(X(91), Y(611), 'R', null, 1.35); L('CH2', 66, 610, 0.011); J(121, 601); J(123, 619);
+  L('SN1', 64, 655, 0.011); L('(220Vca)', 64, 663, 0.010); A.lamp(X(95), Y(662), 'Y', null, 1.35, false); J(124, 653); J(126, 670);
   [83, 99, 116].forEach((x, i) => { J(x, 735, 'K', 'CH5:' + ['NA', 'C', 'NF'][i]); L(['NA', 'C', 'NF'][i], x, 723, 0.0125); });
   for (const x of [83, 99, 116]) P.line([[X(x), Y(738)], [X(103), Y(752)]], 0.0022, '#222');
   A.sel(X(103), Y(765), 1.45, -0.35); L('CH5', 132, 765, 0.011);
@@ -72,7 +71,7 @@ function b1(A) {
     const xs = [0, 1, 2, 3, 4].map((i) => x0 + i * 16.8);
     xs.forEach((x, i) => { J(x, 604.6, 'KWRKR'[i], `K${k + 1}:` + ['L1', 'L2', 'L3', 'NO', 'A1'][i]); L(['L1', 'L2', 'L3', 'NO', 'A1'][i], x, 595, 0.0125); });
     xs.forEach((x, i) => { J(x, 719, 'KWRKR'[i], `K${k + 1}:` + ['T1', 'T2', 'T3', 'NO', 'A2'][i]); L(['T1', 'T2', 'T3', 'NO', 'A2'][i], x, 729, 0.0125); });
-    L(`K${k + 1} (220Vca)`, x0 - 4, 629, 0.012);
+    L(`K${k + 1} (220Vca)`, x0 - 16, 634, 0.0105);
     A.k3rt(X(x0 + 34), Y(662.7), xs.map((x) => X(x)), Y(604.6), Y(719));
   });
   // barramentos L1 / L2 / L3 / N
@@ -89,31 +88,33 @@ function b1(A) {
   A.dev('dr4', X(216), Y(915), 1.5, 1.04); L('DR', 219, 838, 0.0115); L('TRIFÁSICO', 219, 847, 0.0115); ['L1', 'L2', 'L3', 'N'].forEach((t, i) => L(t, 199 + i * 12, 862, 0.0095));
   A.shortWires(X(216), Y(897), [0xf0f0f0, 0xf0f0f0, 0xf0f0f0, 0xf0f0f0], 0.018);
   // RCA / RPT / FSN / RST
-  const relay = (bx, by, sx, name, tops, topY, topL, mids, bots, dark) => {
-    A.dev(dark ? 'tallD' : 'tall', X(bx), Y(by), sx, 1.0);
-    L(name, bx - 37, by - 27, 0.009); L('(220Vca)', bx - 37, by - 20, 0.0084);
+  const relay = (bx, by, sx, name, tops, topY, topL, mids, bots, dark, o = {}) => {
+    A.dev(dark ? 'tallD' : 'tall', X(bx), Y(by), sx, 0.92);
+    // nome do relé: fonte única, à esquerda e acima do módulo (entre os fios de cima e o trilho)
+    const lx = bx - 13 - 17 * sx - (o.lx || 0);
+    L(name, lx, by - 36, 0.0098); L('(220Vca)', lx, by - 26, 0.009);
     const dk = `${name}@${bx}:`;
     tops.forEach(([x, c, t]) => { J(x, topY, c, dk + t); L(t, x, topY - 10, 0.0115); });
     if (mids) mids.forEach(([x, c, t]) => { J(x, 858, c, dk + t); L(t, x, 849, 0.0115); });
-    bots.forEach(([x, y, c, t]) => { J(x, y, c, dk + t); L(t, x, y + 8.6, 0.0082); });
+    bots.forEach(([x, y, c, t]) => { J(x, y, c, dk + t); L(t, x, y + 10, 0.0100); });
     A.relayWires(X(bx), Y(by), tops.map(([x]) => X(x)), Y(mids ? 858 : topY));
   };
-  relay(304, 922, 1.4, 'RCA-01', [[297, 'R', 'A1'], [312, 'R', 'A2']], 840, 0, [[297, 'K', '-IN'], [312, 'K', '+IN']], [[301, 969, 'K', 'J'], [317, 969, 'K', 'R'], [301, 989, 'K', '14'], [317, 989, 'K', '11'], [332, 989, 'K', '12']]);
-  relay(369, 918, 1.25, 'RPT-01', [[359, 'R', 'A1'], [375, 'R', 'A2'], [391, 'K', 'C']], 840, 0, [[359, 'K', 'P1'], [375, 'K', 'P2'], [391, 'K', 'P3']], [[361, 970, 'K', '14'], [377, 970, 'K', '11'], [393, 970, 'K', '12']]);
+  relay(304, 916, 1.4, 'RCA-01', [[297, 'R', 'A1'], [312, 'R', 'A2']], 840, 0, [[297, 'K', '-IN'], [312, 'K', '+IN']], [[301, 960, 'K', 'J'], [317, 960, 'K', 'R'], [301, 982, 'K', '14'], [317, 982, 'K', '11'], [333, 982, 'K', '12']]);
+  relay(369, 916, 1.25, 'RPT-01', [[359, 'R', 'A1'], [375, 'R', 'A2'], [391, 'K', 'C']], 840, 0, [[359, 'K', 'P1'], [375, 'K', 'P2'], [391, 'K', 'P3']], [[361, 964, 'K', '14'], [377, 964, 'K', '11'], [393, 964, 'K', '12']], false, { lx: -4 });
   // FSN-22: só os jumpers (sem módulo)
-  [[422, 'K', 'L1'], [438, 'W', 'L2'], [454, 'R', 'L3']].forEach(([x, c, t]) => { J(x, 842, c, 'FSN:' + t); L(t, x, 832, 0.0115); });
-  [[438, 'J'], [454, 'N']].forEach(([x, t]) => { J(x, 858, 'K', 'FSN:' + t); L(t, x, 849, 0.0115); });
-  L('FSN-22', 412, 888, 0.0105); L('(220Vca)', 412, 896, 0.0098);
-  A.jumpers(X(438), Y(858), X(454), Y(905)); [423, 439, 454].forEach((x, i) => { J(x, 971, 'K', 'FSN:' + ['14', '11', '12'][i]); L(['14', '11', '12'][i], x, 981, 0.0105); });
-  A.jumpers(X(428), Y(950), X(450), Y(962));
-  relay(499, 922, 1.1, 'RST-21', [[486, 'K', 'L1'], [501, 'W', 'L2'], [517, 'R', 'L3']], 866, 0, null, [[485, 971, 'K', '14'], [501, 971, 'K', '11'], [516, 971, 'K', '12']]);
+  [[412, 'K', 'L1'], [428, 'W', 'L2'], [444, 'R', 'L3']].forEach(([x, c, t]) => { J(x, 842, c, 'FSN:' + t); L(t, x, 832, 0.0115); });
+  [[428, 'J'], [444, 'N']].forEach(([x, t]) => { J(x, 858, 'K', 'FSN:' + t); L(t, x, 849, 0.0115); });
+  L('FSN-22', 405, 884, 0.0098); L('(220Vca)', 405, 894, 0.009);
+  A.jumpers(X(428), Y(858), X(444), Y(905)); [412, 428, 444].forEach((x, i) => { J(x, 964, 'K', 'FSN:' + ['14', '11', '12'][i]); L(['14', '11', '12'][i], x, 974, 0.0100); });
+  A.jumpers(X(417), Y(944), X(439), Y(955));
+  relay(499, 916, 1.1, 'RST-21', [[486, 'K', 'L1'], [501, 'W', 'L2'], [517, 'R', 'L3']], 866, 0, null, [[485, 964, 'K', '14'], [501, 964, 'K', '11'], [517, 964, 'K', '12']]);
   // RAX-02 x4, RYD-01, TCS-01
   [[566, 'RAX-02'], [629, 'RAX-02'], [695, 'RAX-02'], [760, 'RAX-02'], [826, 'RYD-01']].forEach(([bx, n]) => {
     const a = bx - 16;
-    relay(bx, 920, 1.05, n, [[a, 'R', 'A1'], [a + 16, 'K', '15'], [a + 32, 'K', '25']], 866, 0, null,
-      [[a - 3, 977, 'K', '26'], [a + 12, 977, 'K', '28'], [a - 3, 992, 'K', '16'], [a + 12, 992, 'K', '18'], [a + 28, 992, 'R', 'A2']]);
+    relay(bx, 916, 1.05, n, [[a, 'R', 'A1'], [a + 16, 'K', '15'], [a + 32, 'K', '25']], 866, 0, null,
+      [[a - 1, 960, 'K', '26'], [a + 15, 960, 'K', '28'], [a - 1, 982, 'K', '16'], [a + 15, 982, 'K', '18'], [a + 31, 982, 'R', 'A2']]);
   });
-  relay(892, 922, 1.25, 'TCS-01', [[873, 'R', 'A1'], [890, 'K', '15']], 866, 0, null, [[865, 983, 'K', '16'], [881, 983, 'K', '18'], [897, 985, 'R', 'A2']], false);
+  relay(892, 916, 1.25, 'TCS-01', [[873, 'R', 'A1'], [890, 'K', '15']], 866, 0, null, [[865, 966, 'K', '16'], [881, 966, 'K', '18'], [897, 966, 'R', 'A2']], false);
 }
 
 // ---------------- b2 · branca "KET 1070: INDUSTRIAL" ----------------
