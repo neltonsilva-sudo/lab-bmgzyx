@@ -10,7 +10,7 @@ export function buildMotor3D(ctx) {
   const root = new THREE.Group(); root.name = 'motorM1';
   // montado pelo flange no furo do painel, eixo saindo para a frente (vista frontal = tampa + disco estroboscópico
   // coaxial na ponta do eixo). Escala ~60% da versão anterior; fica à direita do sensor indutivo, sem cobri-lo.
-  const sc = (f.width / 1.1) * 0.72 * 0.68;
+  const sc = (f.width / 1.1) * 0.72 * 0.95;
   root.position.set(hole.x, hole.y, 0); root.scale.setScalar(sc);
   f.face.add(root);
 

@@ -1,9 +1,9 @@
 // DONO: agente "aula-pratica". Segunda tela (tela cheia) com o painel KET-1030 funcional: cabos de teste, botoeiras,
 // medidores, multímetro, procedimento NR-10, roteiros com verificação automática, defeitos e relatório.
-import { createSim, fmtA } from './lesson_sim.js?v=20261009141848';
-import { getPanel, JACK_COL } from './lesson_panels.js?v=20261009141848';
-import { build3DBackground } from './lesson_bg3d.js?v=20261009141848';
-import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261009141848';
+import { createSim, fmtA } from './lesson_sim.js?v=20261009142652';
+import { getPanel, JACK_COL } from './lesson_panels.js?v=20261009142652';
+import { build3DBackground } from './lesson_bg3d.js?v=20261009142652';
+import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261009142652';
 
 const CABLE = { R: ['#d11f1f', '#7a0d0d', 'vermelho'], K: ['#202020', '#000', 'preto'], B: ['#1f56c9', '#0d2a6e', 'azul'], Y: ['#f0c419', '#8a6d05', 'amarelo'], W: ['#f2f2ee', '#8d8d86', 'branco'], G: ['#1f9a3c', '#0b4a1a', 'verde'] };
 const NS = 'http://www.w3.org/2000/svg';
