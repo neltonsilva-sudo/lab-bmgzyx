@@ -1,7 +1,7 @@
 // DONO: agente "bancadas". Layout de cada painel didático, reproduzido a partir de refs/foto1_full.jpg (recortes).
 // Coordenadas da face em metros: x ∈ [-0.865, 0.865] (esq→dir para quem olha o painel), y ∈ [-0.465, 0.465].
 // A API "A" pinta a serigrafia no canvas e instancia as peças 3D nos mesmos pontos (ver benches.js).
-import { paintYellowBg, paintWhiteBg, paintB1Bg, rng } from './benches_tex.js?v=20261009092323';
+import { paintYellowBg, paintWhiteBg, paintB1Bg, rng } from './benches_tex.js?v=20261009094944';
 
 export const TITLES = {
   b1: 'KET-1030: Proteção', b2: 'KET 1070: Industrial', b3: 'KET-1050: Proteção', b4: 'KET-1050: Proteção', b5: 'KET-1020: Comandos Elétricos',
@@ -35,13 +35,13 @@ function b1(A) {
   for (const x of [83, 99, 116]) P.line([[X(x), Y(738)], [X(103), Y(752)]], 0.0022, '#222');
   A.sel(X(103), Y(765), 1.45, -0.35); L('CH5', 132, 765, 0.011);
   // temporizadores CTD-02 / CTD-03
-  for (const [bx, by, top, name] of [[260, 558, 526, 'CTD-02'], [265, 674, 633, 'CTD-03']]) {
+  for (const [bx, by, top, name] of [[260, 558, 526, 'CTD-02'], [265, 690, 650, 'CTD-03']]) {
     const x0 = bx - 27;
-    [0, 1, 2, 3, 4].forEach((i) => { J(x0 + i * 17, top, 'K', `${name}:${i + 1}`); L(String(i + 1), x0 + i * 17, top - 10, 0.0125); });
+    [0, 1, 2, 3, 4].forEach((i) => { J(x0 + i * 17, top - 10, 'K', `${name}:${i + 1}`); L(String(i + 1), x0 + i * 17, top - 20, 0.0125); });
     A.ctd(X(bx), Y(by));
     L(name, bx - 46, by - 31, 0.0115); L('(220Vca)', bx - 48, by - 23, 0.0105);
-    [0, 1, 2].forEach((i) => { J(bx + 43, by - 16 + i * 17.5, 'RRK'[i], `${name}:${6 + i}`); L(String(6 + i), bx + 54, by - 16 + i * 17.5, 0.0115); });
-    [0, 1, 2, 3, 4].forEach((i) => { J(x0 + 4 + i * 16.7, by + 43, 'YYYRK'[i], `${name}:${9 + i}`); L(String(9 + i), x0 + 4 + i * 16.7, by + 53, 0.0115); });
+    [0, 1, 2].forEach((i) => { J(bx + 49, by - 16 + i * 17.5, 'RRK'[i], `${name}:${6 + i}`); L(String(6 + i), bx + 60, by - 16 + i * 17.5, 0.0115); });
+    [0, 1, 2, 3, 4].forEach((i) => { J(x0 + 4 + i * 16.7, by + 47, 'YYYRK'[i], `${name}:${9 + i}`); L(String(9 + i), x0 + 4 + i * 16.7, by + 57, 0.0115); });
   }
   // auto-transformador
   L('AUTO-TRANSFORMADOR', 482, 474, 0.0135);
@@ -106,14 +106,14 @@ function b1(A) {
   L('FSN-22', 412, 888, 0.0105); L('(220Vca)', 412, 896, 0.0098);
   A.jumpers(X(438), Y(858), X(454), Y(905)); [423, 439, 454].forEach((x, i) => { J(x, 971, 'K', 'FSN:' + ['14', '11', '12'][i]); L(['14', '11', '12'][i], x, 981, 0.0105); });
   A.jumpers(X(428), Y(950), X(450), Y(962));
-  relay(499, 922, 1.1, 'RST-21', [[486, 'K', 'L1'], [501, 'W', 'L2'], [517, 'R', 'L3']], 884, 0, null, [[485, 971, 'K', '14'], [501, 971, 'K', '11'], [516, 971, 'K', '12']]);
+  relay(499, 922, 1.1, 'RST-21', [[486, 'K', 'L1'], [501, 'W', 'L2'], [517, 'R', 'L3']], 866, 0, null, [[485, 971, 'K', '14'], [501, 971, 'K', '11'], [516, 971, 'K', '12']]);
   // RAX-02 x4, RYD-01, TCS-01
   [[566, 'RAX-02'], [629, 'RAX-02'], [695, 'RAX-02'], [760, 'RAX-02'], [826, 'RYD-01']].forEach(([bx, n]) => {
     const a = bx - 16;
-    relay(bx, 920, 1.05, n, [[a, 'R', 'A1'], [a + 16, 'K', '15'], [a + 32, 'K', '25']], 884, 0, null,
+    relay(bx, 920, 1.05, n, [[a, 'R', 'A1'], [a + 16, 'K', '15'], [a + 32, 'K', '25']], 866, 0, null,
       [[a - 3, 977, 'K', '26'], [a + 12, 977, 'K', '28'], [a - 3, 992, 'K', '16'], [a + 12, 992, 'K', '18'], [a + 28, 992, 'R', 'A2']]);
   });
-  relay(892, 922, 1.25, 'TCS-01', [[873, 'R', 'A1'], [890, 'K', '15']], 884, 0, null, [[865, 983, 'K', '16'], [881, 983, 'K', '18'], [897, 985, 'R', 'A2']], false);
+  relay(892, 922, 1.25, 'TCS-01', [[873, 'R', 'A1'], [890, 'K', '15']], 866, 0, null, [[865, 983, 'K', '16'], [881, 983, 'K', '18'], [897, 985, 'R', 'A2']], false);
 }
 
 // ---------------- b2 · branca "KET 1070: INDUSTRIAL" ----------------

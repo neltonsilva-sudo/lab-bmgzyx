@@ -62,7 +62,7 @@ export function buildMotor3D(ctx) {
   const fx = (mm) => (mm / 1400) * f.width, fy = (mm) => (1 - mm / 910) * f.height;
   const mArm = new THREE.MeshStandardMaterial({ color: 0x8fa4b8, metalness: 0.2, roughness: 0.5 });
   for (let i = 0; i < 5; i++) {
-    const g = new THREE.Group(); g.position.set(fx(675 + 158.5 * i) - 0.006 * sc, fy(339), 0.075 * sc); g.scale.setScalar(sc); f.face.add(g);
+    const g = new THREE.Group(); g.position.set(fx(675 + 158.5 * i) - 0.006 * sc, fy(339), 0.075 * sc); g.scale.setScalar(sc); f.face.add(g); g.visible = false; // desalinhado com o contator 3D novo (que já tem janela indicadora)
     const arm = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.03, 0.01), mArm); g.add(arm);
     const win = new THREE.Mesh(new THREE.PlaneGeometry(0.012, 0.008), new THREE.MeshBasicMaterial({ color: 0x2a2f33 }));
     win.position.set(0, 0.024, 0.0052); g.add(win);

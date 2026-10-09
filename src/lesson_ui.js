@@ -1,9 +1,9 @@
 // DONO: agente "aula-pratica". Segunda tela (tela cheia) com o painel KET-1030 funcional: cabos de teste, botoeiras,
 // medidores, multímetro, procedimento NR-10, roteiros com verificação automática, defeitos e relatório.
-import { createSim, fmtA } from './lesson_sim.js?v=20261009092323';
-import { getPanel, JACK_COL } from './lesson_panels.js?v=20261009092323';
-import { build3DBackground } from './lesson_bg3d.js?v=20261009092323';
-import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261009092323';
+import { createSim, fmtA } from './lesson_sim.js?v=20261009094944';
+import { getPanel, JACK_COL } from './lesson_panels.js?v=20261009094944';
+import { build3DBackground } from './lesson_bg3d.js?v=20261009094944';
+import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261009094944';
 
 const CABLE = { R: ['#d11f1f', '#7a0d0d', 'vermelho'], K: ['#202020', '#000', 'preto'], B: ['#1f56c9', '#0d2a6e', 'azul'], Y: ['#f0c419', '#8a6d05', 'amarelo'], W: ['#f2f2ee', '#8d8d86', 'branco'], G: ['#1f9a3c', '#0b4a1a', 'verde'] };
 const NS = 'http://www.w3.org/2000/svg';
@@ -228,6 +228,10 @@ export function createLessonScreen(opts = {}) {
     const widthOf = (t, fs, w) => { ctx2.font = `${w} ${fs}px Arial, Helvetica, sans-serif`; return ctx2.measureText(t).width; };
     const hitsJack = (x0, y0, x1, y1) => jk.some(([x, y]) => { const cx = Math.max(x0, Math.min(x, x1)), cy = Math.max(y0, Math.min(y, y1)); return (cx - x) ** 2 + (cy - y) ** 2 < 8.5 * 8.5; });
     const hitsText = (x0, y0, x1, y1) => placed.some((r) => !(x1 < r[0] || x0 > r[2] || y1 < r[1] || y0 > r[3]));
+    // ocupação real (máscara 3D: componentes, bornes, fios, trilhos)
+    const hitsObj = (x0, y0, x1, y1) => { const B = bg3d; if (!B.occ) return false; const st = 1.6;
+      for (let y = y0; y <= y1; y += st) for (let x = x0; x <= x1; x += st) { const u = Math.round((x - B.VX) * B.k), v = Math.round((y - B.VY) * B.k); if (u >= 0 && v >= 0 && u < B.cw && v < B.ch && B.occ[v * B.cw + u]) return true; }
+      return false; };
     // títulos e nomes grandes primeiro; rótulos curtos (bornes) depois
     const list = [...bg3d.texts].sort((a, b) => (b.title - a.title) || (b.fs - a.fs));
     let html = '';
@@ -242,7 +246,7 @@ export function createLessonScreen(opts = {}) {
       for (let pass = 0; pass < 3 && !best; pass++) {
         for (const [dx, dy] of cands) {
           const cx = r.x + dx, cy = r.y + dy, x0 = cx - wd / 2 - 0.6, x1 = cx + wd / 2 + 0.6, y0 = cy - h / 2 - 0.4, y1 = cy + h / 2 + 0.4;
-          if (y1 < FH + 34 && x0 > 4 && x1 < FW - 4 && !hitsJack(x0, y0, x1, y1) && !hitsText(x0, y0, x1, y1)) { best = [cx, cy, x0, y0, x1, y1]; break; }
+          if (y1 < FH + 34 && x0 > 4 && x1 < FW - 4 && !hitsJack(x0, y0, x1, y1) && !hitsText(x0, y0, x1, y1) && !hitsObj(x0, y0, x1, y1)) { best = [cx, cy, x0, y0, x1, y1]; break; }
         }
         if (!best) { fs *= 0.86; }
       }
@@ -257,34 +261,121 @@ export function createLessonScreen(opts = {}) {
   const W = [];
   const lampColor = { R: ['#ff3b28', '#7d1a12'], G: ['#4dff6a', '#1d6b2a'], Y: ['#ffe03a', '#b89a14'] };
   const btnColor = { R: '#e0201c', G: '#22a443', Y: '#f0c418', K: '#1a1a1a' };
+  // ---- materiais dos widgets (luz de cima-esquerda; sombras para baixo-direita) ----
+  const hx = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+  const mix = (c, t, k) => '#' + hx(c).map((v, i) => Math.round(v + (hx(t)[i] - v) * k).toString(16).padStart(2, '0')).join('');
+  defs.insertAdjacentHTML('beforeend', `
+    <filter id="wSh" x="-.5" y="-.5" width="2" height="2"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6"/><feOffset dx="1.6" dy="2.6"/><feComponentTransfer><feFuncA type="linear" slope=".55"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="wShS" x="-.5" y="-.5" width="2" height="2"><feGaussianBlur in="SourceAlpha" stdDeviation=".7"/><feOffset dx=".8" dy="1.3"/><feComponentTransfer><feFuncA type="linear" slope=".6"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="wBl" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="1.4"/></filter>
+    <filter id="wHalo" x="-1.5" y="-1.5" width="4" height="4"><feGaussianBlur stdDeviation="5"/></filter>
+    <radialGradient id="wBlkBez" cx="34%" cy="28%" r="80%"><stop offset="0" stop-color="#6a6d72"/><stop offset=".38" stop-color="#2a2c2f"/><stop offset=".8" stop-color="#0d0e10"/><stop offset="1" stop-color="#000"/></radialGradient>
+    <linearGradient id="wRim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".75"/><stop offset=".45" stop-color="#ffffff" stop-opacity="0"/><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".6"/></linearGradient>
+    <linearGradient id="wRimIn" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".85"/><stop offset=".5" stop-color="#000" stop-opacity=".2"/><stop offset="1" stop-color="#fff" stop-opacity=".55"/></linearGradient>
+    <linearGradient id="wChrome" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".3" stop-color="#c9ccd1"/><stop offset=".55" stop-color="#7d8188"/><stop offset=".75" stop-color="#d5d8dc"/><stop offset="1" stop-color="#4a4d52"/></linearGradient>
+    <radialGradient id="wSpec" cx="36%" cy="28%" r="62%"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset=".28" stop-color="#fff" stop-opacity=".18"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".38"/></radialGradient>
+    <radialGradient id="wGlass" cx="50%" cy="50%" r="50%"><stop offset=".72" stop-color="#fff" stop-opacity="0"/><stop offset=".93" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
+    <radialGradient id="wBrass" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fff6c8"/><stop offset=".35" stop-color="#d9b350"/><stop offset=".8" stop-color="#8a6a1c"/><stop offset="1" stop-color="#5a4410"/></radialGradient>
+    <linearGradient id="wLvB" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#eef0f2"/><stop offset=".8" stop-color="#c3c7cc"/><stop offset="1" stop-color="#9da2a8"/></linearGradient>
+    <linearGradient id="wLvTipU" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8d939a"/><stop offset="1" stop-color="#3d4146"/></linearGradient>
+    <linearGradient id="wLvTipD" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a1c1f"/><stop offset="1" stop-color="#000"/></linearGradient>
+    <linearGradient id="wLvK" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5d6268"/><stop offset=".22" stop-color="#2e3236"/><stop offset=".7" stop-color="#16181b"/><stop offset="1" stop-color="#060607"/></linearGradient>
+    <linearGradient id="wTie" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b7076"/><stop offset=".35" stop-color="#2a2d31"/><stop offset="1" stop-color="#0a0b0c"/></linearGradient>
+    <linearGradient id="wBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9e7e1"/><stop offset="1" stop-color="#e2e0da"/></linearGradient>
+    <radialGradient id="wTst" cx="36%" cy="30%" r="75%"><stop offset="0" stop-color="#f4f6f8"/><stop offset=".6" stop-color="#b9bec4"/><stop offset="1" stop-color="#7d838a"/></radialGradient>
+    <linearGradient id="wRec" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000"/><stop offset=".45" stop-color="#14171a"/><stop offset="1" stop-color="#262a2e"/></linearGradient>
+    <linearGradient id="wShD" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".85"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
+    <linearGradient id="wWing" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5b5f64"/><stop offset=".25" stop-color="#2b2e31"/><stop offset=".7" stop-color="#141517"/><stop offset="1" stop-color="#050505"/></linearGradient>
+    <linearGradient id="wTag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6e7c4"/><stop offset="1" stop-color="#cdb684"/></linearGradient>
+    <linearGradient id="wPad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6a55"/><stop offset=".45" stop-color="#d32f22"/><stop offset="1" stop-color="#7a1209"/></linearGradient>
+    ${Object.entries(btnColor).map(([k, c]) => `<radialGradient id="wBt${k}" cx="36%" cy="30%" r="78%"><stop offset="0" stop-color="${mix(c, '#ffffff', 0.45)}"/><stop offset=".45" stop-color="${c}"/><stop offset=".85" stop-color="${mix(c, '#000000', 0.45)}"/><stop offset="1" stop-color="${mix(c, '#000000', 0.7)}"/></radialGradient>
+      <radialGradient id="wBtF${k}" cx="62%" cy="68%" r="70%"><stop offset="0" stop-color="${mix(c, '#ffffff', 0.18)}"/><stop offset=".7" stop-color="${c}"/><stop offset="1" stop-color="${mix(c, '#000000', 0.3)}"/></radialGradient>`).join('')}
+    ${Object.entries(lampColor).map(([k, [on, off]]) => `<radialGradient id="wLOn${k}" cx="42%" cy="40%" r="65%"><stop offset="0" stop-color="#ffffff"/><stop offset=".22" stop-color="${mix(on, '#ffffff', 0.55)}"/><stop offset=".6" stop-color="${on}"/><stop offset="1" stop-color="${mix(on, '#000000', 0.35)}"/></radialGradient>
+      <radialGradient id="wLOff${k}" cx="38%" cy="34%" r="72%"><stop offset="0" stop-color="${mix(off, '#ffffff', 0.35)}"/><stop offset=".55" stop-color="${off}"/><stop offset="1" stop-color="${mix(off, '#000000', 0.6)}"/></radialGradient>`).join('')}`);
+  // ajuste fino (em unidades do painel) do desenho de cada peça sobre a peça do render 3D (medido em captura 3200 px)
+  const ALN = { ENERG: [-2.8, -7.4], SN1: [3.7, -0.3], CH1: [1.4, -2.7], CH2: [1.6, -1.2], CH5: [3.7, -1.9] };
+  const bezel = (r) => `<circle r="${r + 0.6}" cx="1.5" cy="2.4" fill="#000" opacity=".5" filter="url(#wBl)"/><circle r="${r}" fill="url(#wBlkBez)"/><circle r="${r - 0.35}" fill="none" stroke="url(#wRim)" stroke-width=".9"/>`;
+  // alavanca de disjuntor modular (plástico preto com estrias), vista frontal; a ponta voltada para fora fica
+  // em cima (I) ou embaixo (O); sombra projetada para baixo no fundo do recorte
+  const lever = (x, y0, y1, hw, up, mark) => {
+    const x0 = x - hw, w = hw * 2, h = y1 - y0, ym = (y0 + y1) / 2;
+    const tip = up ? `<rect x="${x0}" y="${y0}" width="${w}" height="${(h * 0.26).toFixed(2)}" rx="1.4" fill="url(#wLvTipU)"/>`
+      : `<rect x="${x0}" y="${(y1 - h * 0.26).toFixed(2)}" width="${w}" height="${(h * 0.26).toFixed(2)}" rx="1.4" fill="url(#wLvTipD)"/>`;
+    const r0 = up ? y0 + h * 0.36 : y0 + h * 0.18, ridges = [0, 1, 2, 3].map((i) => `<path d="M${x0 + 1.2} ${(r0 + i * h * 0.12).toFixed(2)} H${x0 + w - 1.2}" stroke="#000" stroke-width=".7" opacity=".8"/><path d="M${x0 + 1.2} ${(r0 + i * h * 0.12 + 0.7).toFixed(2)} H${x0 + w - 1.2}" stroke="#fff" stroke-width=".4" opacity=".22"/>`).join('');
+    return `<rect x="${x0 - 1}" y="${y1 - 1}" width="${w + 2}" height="6" fill="url(#wShD)" opacity=".9"/>
+      <rect x="${x0}" y="${y0}" width="${w}" height="${h}" rx="1.6" fill="url(#wLvK)" filter="url(#wShS)"/>${tip}${ridges}
+      <path d="M${x0 + 0.7} ${y0 + 1.6} V${y1 - 1.6}" stroke="#fff" stroke-width=".6" stroke-opacity=".35"/>
+      ${mark ? `<text x="${x}" y="${(up ? y1 - 1.6 : y0 + 4.6).toFixed(2)}" text-anchor="middle" font-size="4.2" font-weight="800" fill="${up ? '#ff5446' : '#4fd27a'}" font-family="Arial">${up ? 'I' : 'O'}</text>` : ''}`;
+  };
+  // recorte da alavanca na tampa: fundo escuro + chanfro claro na borda inferior/direita (que recebe a luz)
+  const recess = (x, hw, y0, y1) => `<rect x="${x - hw}" y="${y0}" width="${hw * 2}" height="${y1 - y0}" rx="1.8" fill="url(#wRec)"/>
+    <path d="M${x - hw + 0.6} ${y1 - 0.3} H${x + hw - 0.4} V${y0 + 1}" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width=".8"/><path d="M${x - hw + 0.3} ${y1 - 1} V${y0 + 0.3} H${x + hw - 1}" fill="none" stroke="#000" stroke-opacity=".8" stroke-width=".9"/>`;
+  // indicador de posição dos contatos (verde = aberto, vermelho = fechado) sobre o indicador do 3D
+  const flag = (x, y, w, h) => `<rect class="fl" x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="1.4" fill="#1f9a4a"/><rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="1.4" fill="url(#wSpec)" opacity=".6"/><rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="1.4" fill="none" stroke="#000" stroke-opacity=".45" stroke-width=".5"/>`;
   for (const w of panel.widgets) {
     const g = el('g', { class: 'wd', transform: `translate(${w.x},${w.y})` }, gW); w.g = g; W.push(w);
     if (w.tip) g.dataset.tip = w.tip;
+    const [ax, ay] = ALN[w.dev || w.src] || [0, 0];
     if (w.type === 'lamp') {
-      const s = w.s || 1, [on, off] = lampColor[w.c];
-      g.innerHTML = `<circle r="${14.5 * s}" fill="#252525" filter="url(#fSh)"/><circle r="${12.2 * s}" fill="url(#gMetal)"/><circle class="glow" r="${17 * s}" fill="${on}" opacity="0" filter="url(#fGlow)"/>
-        <circle class="dome" r="${10.5 * s}" fill="${off}"/><ellipse cx="${-3 * s}" cy="${-3.5 * s}" rx="${4 * s}" ry="${2.6 * s}" fill="#fff" opacity=".4"/>`;
-      w.on = on; w.off = off;
+      // sinaleiro: bisel preto, aro cromado, cúpula de vidro (núcleo quente + halo quando aceso)
+      const s = w.s || 1, k = w.c;
+      g.innerHTML = `<g transform="translate(${ax},${ay}) scale(${s})"><g class="glow" opacity="0"><circle r="26" fill="${lampColor[k][0]}" opacity=".55" filter="url(#wHalo)"/><circle r="16" fill="${lampColor[k][0]}" opacity=".7" filter="url(#wBl)"/></g>
+        ${bezel(14.5)}<circle r="12.3" fill="url(#wChrome)"/><circle r="11" fill="#111"/>
+        <circle class="dome" r="10.4" fill="url(#wLOff${k})"/><circle class="core" r="5.5" cx="-.6" cy="-.6" fill="#fff" opacity="0" filter="url(#wBl)"/>
+        <circle r="10.4" fill="url(#wGlass)"/><path d="M-7.6 -3.2 A8 8 0 0 1 -2.6 -7.8" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".75"/><ellipse cx="4.4" cy="5.2" rx="2.2" ry="1.1" transform="rotate(-40 4.4 5.2)" fill="#fff" opacity=".22"/></g>`;
+      w.on = `url(#wLOn${k})`; w.off = `url(#wLOff${k})`;
     } else if (w.type === 'btn') {
-      const s = w.r || 1;
-      g.innerHTML = `<g transform="scale(${s})"><circle r="14.5" fill="#2a2a2a" filter="url(#fSh)"/><circle r="12" fill="#a5a5a5"/><g class="cap"><circle r="10.5" fill="${btnColor[w.c]}"/><circle r="10.5" fill="url(#gMetal)" opacity=".22"/><ellipse cx="-3" cy="-4" rx="4.5" ry="2.6" fill="#fff" opacity=".35"/></g></g>`;
+      // botão faceado: bisel preto, folga escura, cápsula com face côncava; ao pressionar afunda
+      const s = w.r || 1, k = w.c;
+      g.innerHTML = `<g transform="translate(${ax},${ay}) scale(${s})">${bezel(14.5)}<circle r="11.9" fill="#050505"/><circle r="11.9" fill="none" stroke="url(#wRimIn)" stroke-width="1"/>
+        <g class="cap"><circle r="10.6" cx=".7" cy="1.1" fill="#000" opacity=".6" filter="url(#wBl)"/><circle r="10.4" fill="url(#wBt${k})"/><circle r="7.9" fill="url(#wBtF${k})"/><circle r="7.9" fill="none" stroke="#000" stroke-opacity=".25" stroke-width=".6"/>
+        <circle r="10.4" fill="url(#wSpec)" opacity=".75"/><path d="M-8.3 -3.4 A9 9 0 0 1 -3.4 -8.4" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".8"/></g>
+        <circle class="ps" r="10.6" fill="none" stroke="#000" stroke-width="2.4" opacity="0" filter="url(#wBl)"/></g>`;
     } else if (w.type === 'sel') {
+      // seletora com manopla tipo alavanca (asa), cubo central e índice branco
       const s = w.r || 1;
-      g.innerHTML = `<g transform="scale(${s})"><circle r="14.5" fill="#2a2a2a" filter="url(#fSh)"/><circle r="12" fill="#1a1a1a"/><g class="knob"><rect x="-3.6" y="-13" width="7.2" height="26" rx="2.4" fill="#151515" stroke="#444"/><rect x="-.9" y="-11" width="1.8" height="8" fill="#f2f2f2"/></g></g>`;
+      const wing = `<path d="M-4.4 -12.6 Q0 -14.4 4.4 -12.6 L3.6 12.6 Q0 14.2 -3.6 12.6 Z"/>`;
+      g.innerHTML = `<g transform="translate(${ax},${ay}) scale(${s})">${bezel(14.5)}<circle r="12.2" fill="#0a0a0b"/><circle r="12.2" fill="none" stroke="url(#wRimIn)" stroke-width=".9"/>
+        <g transform="translate(1.4,2.2)" opacity=".6" filter="url(#wBl)"><g class="knob" fill="#000">${wing}</g></g>
+        <g class="knob"><g fill="url(#wWing)">${wing}</g><path d="M-3.9 -12 L-3.1 12" stroke="#fff" stroke-opacity=".28" stroke-width=".7"/></g>
+        <circle r="6.2" fill="url(#wBlkBez)"/><circle r="6.2" fill="url(#wSpec)" opacity=".55"/>
+        <g class="knob"><rect x="-.8" y="-11.6" width="1.6" height="8.6" rx=".6" fill="#f4f4f4"/></g></g>`;
     } else if (w.type === 'K') {
-      g.innerHTML = `<rect x="-34" y="-52" width="70" height="104" rx="4" fill="transparent"/><rect class="flag" x="12" y="-2" width="7" height="9" rx="1" fill="#d8dde1"/>
-        <rect class="ring" x="-34" y="-53" width="70" height="106" rx="6" fill="none" stroke="#2bd96b" stroke-width="3" opacity="0"/><text class="bt" x="0" y="64" text-anchor="middle" font-size="8.5" font-weight="700" fill="#1a7f3c" font-family="Arial"></text>`;
+      g.innerHTML = `<rect x="-34" y="-52" width="70" height="104" rx="4" fill="transparent"/><rect class="flag" x="12" y="-2" width="7" height="9" rx="1" fill="#d8dde1" stroke="rgba(0,0,0,.35)" stroke-width=".5" filter="url(#wShS)"/>
+        <rect class="ring" x="-34" y="-53" width="70" height="106" rx="6" fill="none" stroke="#2bd96b" stroke-width="4" opacity="0" filter="url(#wBl)"/><text class="bt" x="0" y="64" text-anchor="middle" font-size="8.5" font-weight="700" fill="#1a7f3c" font-family="Arial"></text>`;
     } else if (w.type === 'relay') {
-      g.innerHTML = `<rect x="-18" y="-62" width="36" height="124" fill="transparent"/><circle class="led" cx="-9" cy="-8" r="2.4" fill="#2a3a2c"/><text class="tm" x="0" y="76" text-anchor="middle" font-size="8" font-weight="700" fill="#1f6fd1" font-family="Arial"></text>`;
+      g.innerHTML = `<rect x="-18" y="-62" width="36" height="124" fill="transparent"/><circle class="lh" cx="-9" cy="-8" r="6" fill="#3dff6a" opacity="0" filter="url(#wBl)"/><circle class="led" cx="-9" cy="-8" r="2.4" fill="#2a3a2c" stroke="rgba(0,0,0,.5)" stroke-width=".5"/><circle cx="-9.7" cy="-8.8" r=".8" fill="#fff" opacity=".6"/><text class="tm" x="0" y="76" text-anchor="middle" font-size="8" font-weight="700" fill="#1f6fd1" font-family="Arial"></text>`;
     } else if (w.type === 'ctd') {
-      g.innerHTML = `<rect x="-50" y="-40" width="100" height="90" fill="transparent"/><text class="v" x="0" y="-2" text-anchor="middle" font-family="Consolas,monospace" font-weight="700" font-size="20" fill="#ff4b3a">0.0</text><text class="sv" x="0" y="12" text-anchor="middle" font-family="Consolas,monospace" font-weight="700" font-size="9" fill="#5ef06a">SP 5.0s</text>`;
+      g.innerHTML = `<rect x="-50" y="-40" width="100" height="90" fill="transparent"/><text class="v" x="0" y="-2" text-anchor="middle" font-family="Consolas,monospace" font-weight="700" font-size="20" fill="#ff4b3a" style="filter:drop-shadow(0 0 2px #ff3b28)">0.0</text><text class="sv" x="0" y="12" text-anchor="middle" font-family="Consolas,monospace" font-weight="700" font-size="9" fill="#5ef06a" style="filter:drop-shadow(0 0 1.5px #3dff6a)">SP 5.0s</text>`;
     } else if (w.type === 'mainBreaker') {
-      g.innerHTML = `<rect x="-50" y="-67" width="101" height="134" fill="transparent"/>` + [-33.7, 0, 33.7].map((x) => `<rect class="lev" x="${x - 6}" y="-14" width="12" height="20" rx="2" fill="#151515"/>`).join('') +
-        `<text class="st" x="0" y="54" text-anchor="middle" font-size="8.5" font-weight="800" font-family="Arial"></text><g class="lock" opacity="0"><path d="M-8 -30 v-8 a8 8 0 0 1 16 0 v8" fill="none" stroke="#c9a640" stroke-width="3"/><rect x="-11" y="-31" width="22" height="18" rx="2" fill="#d23b2b" stroke="#7a1a12"/><rect x="14" y="-28" width="34" height="46" rx="2" fill="#fff" stroke="#c62828" stroke-width="2"/><text x="31" y="-15" text-anchor="middle" font-size="5.5" font-weight="800" fill="#c62828" font-family="Arial">PERIGO</text><text x="31" y="-5" text-anchor="middle" font-size="4.6" font-weight="700" fill="#222" font-family="Arial">NÃO</text><text x="31" y="2" text-anchor="middle" font-size="4.6" font-weight="700" fill="#222" font-family="Arial">LIGUE</text></g>`;
+      // alavancas sobre os recortes do modelo 3D (polos a -11,5 / 19,75 / 51 un; recorte y -22,1..8,6), com barra de acoplamento
+      const XS = [-11.5, 19.75, 51], cx = 19.75, HW = 5.7;
+      const POS = { u: [-19.2, -1.6, 1], m: [-15.6, 2, 1], d: [-12.2, 5.4, 0] };
+      const tie = (y) => `<rect x="${XS[0] - HW}" y="${y + 1.4}" width="${XS[2] - XS[0] + HW * 2}" height="2.6" rx="1.2" fill="#000" opacity=".45" filter="url(#wBl)"/><rect x="${XS[0] - HW}" y="${y}" width="${XS[2] - XS[0] + HW * 2}" height="2.6" rx="1.2" fill="url(#wTie)"/>`;
+      g.innerHTML = `<rect x="-50" y="-67" width="120" height="134" fill="transparent"/>` + XS.map((x) => recess(x, 7.6, -22.6, 9.1)).join('') + XS.map((x) => flag(x + 0.4, -33.7, 9.4, 6.2)).join('') +
+        ['u', 'm', 'd'].map((s) => { const [a, b, up] = POS[s];
+          return `<g class="lev" data-s="${s}" opacity="${s === 'd' ? 1 : 0}">${s !== 'd' ? [[-4.3, 12.4], [26.9, 43.6]].map(([p, q]) => `<rect x="${p}" y="5.6" width="${q - p}" height="4.2" fill="url(#wBody)"/>`).join('') : ''}${XS.map((x) => lever(x, a, b, HW, up, s !== 'm')).join('')}${tie(up ? a + 1.2 : b - 2.2)}</g>`; }).join('') +
+        `<text class="st" x="${cx}" y="63" text-anchor="middle" font-size="8.5" font-weight="800" font-family="Arial" paint-order="stroke" stroke="rgba(255,250,225,.85)" stroke-width="1.6"></text>
+        <g class="lock" opacity="0" transform="translate(${cx},0)"><g filter="url(#wSh)"><path d="M-7 -29 v-8 a7 7 0 0 1 14 0 v8" fill="none" stroke="url(#wChrome)" stroke-width="3.2"/>
+        <rect x="-11" y="-31" width="22" height="18" rx="2.5" fill="url(#wPad)"/><rect x="-11" y="-31" width="22" height="18" rx="2.5" fill="url(#wSpec)" opacity=".5"/><circle cx="0" cy="-23.5" r="2" fill="#2a0b07"/><rect x="-.7" y="-23" width="1.4" height="4" fill="#2a0b07"/></g>
+        <path d="M8 -20 Q14 -22 15 -26" fill="none" stroke="#777" stroke-width=".8"/><g filter="url(#wSh)"><rect x="14" y="-28" width="34" height="46" rx="2" fill="#fff" stroke="#c62828" stroke-width="2"/><circle cx="18" cy="-24" r="1.4" fill="#bbb"/></g><text x="31" y="-15" text-anchor="middle" font-size="5.5" font-weight="800" fill="#c62828" font-family="Arial">PERIGO</text><text x="31" y="-5" text-anchor="middle" font-size="4.6" font-weight="700" fill="#222" font-family="Arial">NÃO</text><text x="31" y="2" text-anchor="middle" font-size="4.6" font-weight="700" fill="#222" font-family="Arial">LIGUE</text></g>`;
     } else if (w.type === 'key') {
-      g.innerHTML = `<circle r="14" fill="#222" filter="url(#fSh)"/><circle r="10.5" fill="#111" stroke="#555"/><g class="kb"><rect x="-2.5" y="-9" width="5" height="18" rx="1" fill="#c9a640"/><circle cx="0" cy="-12" r="5" fill="#c9a640" stroke="#7a6420"/></g><path class="tag" d="M0 12 l-4 30 h10 z" fill="#e2c79a" stroke="#a88"/><text class="kt" x="0" y="-20" text-anchor="middle" font-size="7.5" font-weight="700" fill="#1a7f3c" font-family="Arial" paint-order="stroke" stroke="rgba(255,250,225,.9)" stroke-width="1.6"></text>`;
+      // comutador com chave sobre o cilindro do 3D (+32,7 / -3,9 un); a etiqueta cobre a etiqueta do render
+      g.innerHTML = `<g transform="translate(32.7,-3.9)"><circle r="16" fill="transparent"/>
+        <g class="tag" filter="url(#wSh)"><path d="M-1.4 5 Q2 11 5.5 13" fill="none" stroke="#6b6b6b" stroke-width=".9"/><path d="M-1.5 12 L15.8 10.4 L17.6 29.4 L0.4 31 Z" fill="url(#wTag)" stroke="#a48d5c" stroke-width=".6"/><circle cx="5.6" cy="14.6" r="1.4" fill="#8a7650"/><path d="M3 21 h10 M3.4 24.4 h9" stroke="#8a7650" stroke-width=".7" opacity=".7"/></g>
+        ${bezel(12)}<circle r="10.2" fill="url(#wChrome)"/><circle r="8.4" fill="#0b0b0c"/><circle r="7.6" fill="url(#wBrass)"/><circle r="7.6" fill="url(#wSpec)" opacity=".5"/>
+        <g transform="rotate(0)"><rect x="-1.1" y="-5.6" width="2.2" height="11.2" rx=".6" fill="#2a2008"/></g>
+        <g class="kb"><g transform="translate(1.4,2.2)" opacity=".55" filter="url(#wBl)"><path d="M-1.8 -2 V-8 Q-6 -9 -6 -14.5 Q-6 -20.5 0 -20.5 Q6 -20.5 6 -14.5 Q6 -9 1.8 -8 V-2 Z" fill="#000"/></g>
+          <path d="M-1.8 -2 V-8 Q-6 -9 -6 -14.5 Q-6 -20.5 0 -20.5 Q6 -20.5 6 -14.5 Q6 -9 1.8 -8 V-2 Z" fill="url(#wBrass)" stroke="#6b5012" stroke-width=".5"/>
+          <circle cx="0" cy="-15.5" r="1.8" fill="#3a2c08"/><path d="M-4.4 -16 Q-4 -19.2 -.6 -19.4" fill="none" stroke="#fff" stroke-width=".9" stroke-opacity=".8" stroke-linecap="round"/><rect x="-1.8" y="-4" width="3.6" height="2" fill="#000" opacity=".3"/></g>
+        <text class="kt" x="-15" y="3" text-anchor="end" font-size="7.5" font-weight="700" fill="#1a7f3c" font-family="Arial" paint-order="stroke" stroke="rgba(255,250,225,.9)" stroke-width="1.6"></text></g>`;
     } else if (w.type === 'dr') {
-      g.innerHTML = `<rect x="-59" y="-66" width="118" height="132" fill="transparent"/><rect x="34" y="-28" width="14" height="30" rx="2" fill="#151515"/><rect class="lev" x="36" y="-26" width="10" height="13" rx="1.5" fill="#333"/><rect x="5" y="22" width="12" height="9" rx="1" fill="#2a2a2a"/><text x="11" y="40" text-anchor="middle" font-size="5" font-weight="700" fill="#222" font-family="Arial">T</text><text class="st" x="0" y="58" text-anchor="middle" font-size="8.5" font-weight="800" font-family="Arial"></text>`;
+      // DR: alavanca sobre o recorte do 3D (x 43,2..60,4; y -18,6..12,6) e botão redondo de teste T sobre o do 3D
+      const lx = 51.8, HW = 6.6;
+      g.innerHTML = `<rect x="-59" y="-66" width="124" height="132" fill="transparent"/>${recess(lx, 9, -19.1, 13.1)}${flag(51.9, -32.3, 10.4, 6.2)}` +
+        `<g class="lev" data-s="u" opacity="0">${lever(lx, -17, 3.4, HW, 1, 1)}</g><g class="lev" data-s="d" opacity="1">${lever(lx, -9.5, 10.9, HW, 0, 1)}</g>` +
+        `<g transform="translate(25.5,11.9)">${bezel(7.6)}<circle r="5.9" fill="#0a0a0a"/><circle r="5.4" fill="url(#wTst)"/><circle r="5.4" fill="url(#wSpec)" opacity=".6"/><text y="2" text-anchor="middle" font-size="6" font-weight="800" fill="#24272b" font-family="Arial">T</text></g>
+        <text class="st" x="12.5" y="65" text-anchor="middle" font-size="8.5" font-weight="800" font-family="Arial" paint-order="stroke" stroke="rgba(255,250,225,.85)" stroke-width="1.6"></text>`;
     } else if (w.type === 'gst') {
       const { w: gw, h: gh } = GSTr;
       g.innerHTML = `<rect width="${gw}" height="${gh}" rx="5" fill="#f4f6f8" stroke="#8a96a2" stroke-width="2" filter="url(#fSh)"/>
@@ -884,30 +975,31 @@ export function createLessonScreen(opts = {}) {
       const d = w.dev && sim.dev(w.dev), g = w.g;
       if (w.type === 'lamp') {
         const on = w.src === 'ENERG' ? e : !!(d && d.st.lit);
-        g.querySelector('.dome').setAttribute('fill', on ? w.on : w.off); g.querySelector('.glow').setAttribute('opacity', on ? 0.85 : 0);
-      } else if (w.type === 'btn') { const c = g.querySelector('.cap'); c.setAttribute('transform', d.st.pressed ? 'scale(.88)' : ''); c.style.filter = d.st.pressed ? 'brightness(.7)' : ''; }
+        g.querySelector('.dome').setAttribute('fill', on ? w.on : w.off); g.querySelector('.glow').setAttribute('opacity', on ? 1 : 0); g.querySelector('.core').setAttribute('opacity', on ? 0.85 : 0);
+      } else if (w.type === 'btn') { const p = d.st.pressed, c = g.querySelector('.cap'); c.setAttribute('transform', p ? 'translate(.5,.8) scale(.91)' : ''); c.style.filter = p ? 'brightness(.78)' : ''; g.querySelector('.ps').setAttribute('opacity', p ? 0.9 : 0); }
       else if (w.type === 'extEmerg') { g.querySelector('.cap').setAttribute('transform', d.st.latched ? 'scale(.88)' : ''); g.querySelector('.lt').textContent = d.st.latched ? 'TRAVADO' : ''; }
-      else if (w.type === 'sel') g.querySelector('.knob').setAttribute('transform', `rotate(${d.st.pos ? 40 : -40})`);
+      else if (w.type === 'sel') g.querySelectorAll('.knob').forEach((k) => k.setAttribute('transform', `rotate(${d.st.pos ? 40 : -40})`));
       else if (w.type === 'K') {
         const on = !!d.st.on; g.querySelector('.flag').setAttribute('y', on ? 8 : -2); g.querySelector('.flag').setAttribute('fill', on ? '#1a9c4a' : '#d8dde1');
         g.querySelector('.ring').setAttribute('opacity', on ? 0.9 : 0); g.querySelector('.bt').textContent = on ? 'LIGADO' : '';
       } else if (w.type === 'relay' && d) {
         const on = d.type === 'phaseMon' ? d.st.ok : d.type === 'rca' ? d.st.on && !d.st.trip : d.st.on;
-        g.querySelector('.led').setAttribute('fill', d.type === 'rca' && d.st.trip ? '#ff3b28' : on ? '#3dff6a' : '#2a3a2c');
+        const lc = d.type === 'rca' && d.st.trip ? '#ff3b28' : on ? '#3dff6a' : '#2a3a2c'; g.querySelector('.led').setAttribute('fill', lc); g.querySelector('.lh').setAttribute('fill', lc); g.querySelector('.lh').setAttribute('opacity', lc === '#2a3a2c' ? 0 : 0.8);
         const tm = g.querySelector('.tm'); tm.textContent = (d.type === 'timerOn' || d.type === 'ydRelay') && d.st.on ? `${num(Math.min(d.st.t, d.st.T), 1)}/${d.st.T} s` : d.type === 'rca' && d.st.trip ? 'ATUADO' : '';
       } else if (w.type === 'ctd') {
         g.querySelector('.v').textContent = d.st.on ? Math.min(d.st.t, d.st.T).toFixed(1) : '0.0'; g.querySelector('.v').setAttribute('opacity', d.st.on ? 1 : 0);
         g.querySelector('.sv').textContent = `SP ${d.st.T.toFixed(1)}s${d.st.on && d.st.t >= d.st.T ? ' OUT1' : ''}`; g.querySelector('.sv').setAttribute('opacity', d.st.on ? 1 : 0);
       } else if (w.type === 'mainBreaker') {
-        const trip = sim.mainTrip && sim.tripBy !== 'DR', pos = trip ? -4 : X.qf ? -12 : 2;
-        g.querySelectorAll('.lev').forEach((l) => l.setAttribute('y', pos));
+        const trip = sim.mainTrip && sim.tripBy !== 'DR', pos = trip ? 'm' : X.qf ? 'u' : 'd';
+        g.querySelectorAll('.lev').forEach((l) => l.setAttribute('opacity', l.dataset.s === pos ? 1 : 0));
+        g.querySelectorAll('.fl').forEach((f) => f.setAttribute('fill', pos === 'u' ? '#e0281c' : '#1f9a4a'));
         const t = g.querySelector('.st'); t.textContent = trip ? 'DESARMADO' : X.qf ? 'I · LIGADO' : 'O · DESLIGADO'; t.setAttribute('fill', trip ? '#c62828' : X.qf ? '#c62828' : '#1a7f3c');
         g.querySelector('.lock').setAttribute('opacity', X.nr.loto ? 1 : 0);
       } else if (w.type === 'key') {
         g.querySelector('.kb').setAttribute('opacity', X.nr.loto ? 0 : 1); g.querySelector('.tag').setAttribute('opacity', X.nr.loto ? 0 : 1);
         g.querySelector('.kb').setAttribute('transform', X.key ? 'rotate(60)' : ''); const kt = g.querySelector('.kt'); kt.textContent = X.nr.loto ? 'chave retirada' : X.key ? 'LIGADA' : ''; kt.setAttribute('fill', X.nr.loto ? '#b26a00' : '#1a7f3c');
       } else if (w.type === 'dr') {
-        const trip = sim.mainTrip && sim.tripBy === 'DR'; g.querySelector('.lev').setAttribute('y', trip ? -13 : X.qf ? -26 : -13);
+        const trip = sim.mainTrip && sim.tripBy === 'DR', pos = !trip && X.qf ? 'u' : 'd'; g.querySelectorAll('.lev').forEach((l) => l.setAttribute('opacity', l.dataset.s === pos ? 1 : 0)); g.querySelector('.fl').setAttribute('fill', pos === 'u' ? '#e0281c' : '#1f9a4a');
         const t = g.querySelector('.st'); t.textContent = trip ? 'DR ATUADO' : ''; t.setAttribute('fill', '#c62828');
       } else if (w.type === 'gst') {
         const G = sim.gst, live = G.on && !G.fault;

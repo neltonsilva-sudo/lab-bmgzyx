@@ -2,10 +2,10 @@
 // chapa perfurada, prateleira inclinada, estrutura tubular, cabos de teste pendurados, cabos descendo do teto).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { BENCH_ROW, BENCHES, ROOM } from './layout.js?v=20261009092323';
-import * as TX from './benches_tex.js?v=20261009092323';
-import * as PG from './benches_parts.js?v=20261009092323';
-import { LAYOUTS, TITLES } from './benches_layouts.js?v=20261009092323';
+import { BENCH_ROW, BENCHES, ROOM } from './layout.js?v=20261009094944';
+import * as TX from './benches_tex.js?v=20261009094944';
+import * as PG from './benches_parts.js?v=20261009094944';
+import { LAYOUTS, TITLES } from './benches_layouts.js?v=20261009094944';
 
 const LW = 1.73, LH = 0.93;            // face nominal do layout (m)
 const JC = { K: 0x161616, R: 0xc41c1c, W: 0xe4e4dc, B: 0x1c4fc8, Y: 0xe8bf12, G: 0x1f9a3c };
@@ -48,6 +48,9 @@ export function buildBenches(scene, ctx) {
   const mVC = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.42, metalness: 0.0 });
   const mRail = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.38, metalness: 0.55 });
   const mCable = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5 });
+  // plástico técnico semibrilho (disjuntores, contatores, relés, botoeiras) e metal dos parafusos de borne
+  const mPlastic = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.0, clearcoat: 0.35, clearcoatRoughness: 0.42 });
+  const mMetal = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.3, metalness: 0.85 });
   const mPerf = []; // por bancada (densidade dos furos)
   const perfA = TX.perfTex(renderer, 10, 3, 0.2, 3), perfB = TX.perfTex(renderer, 11, 5, 0.19, 4);
   for (const p of [perfA, perfB]) mPerf.push(new THREE.MeshStandardMaterial({ map: p.map, alphaMap: p.alpha, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.6, metalness: 0.05 }));
@@ -68,10 +71,13 @@ export function buildBenches(scene, ctx) {
   const defs = {
     jack: [PG.jackGeo(q), mVC], contactor: [PG.contactorGeo(), mVC], contactorS: [PG.contactorGeo(), mVC],
     relay: [PG.relayGeo('relay'), mVC], timer: [PG.relayGeo('timer'), mVC], breaker: [PG.breakerGeo(), mVC], prot: [PG.protRelayGeo(), mVC],
-    rail: [PG.railGeo(), mRail], button: [PG.buttonGeo(), mVC], bezel: [PG.bezelGeo(), mVC], selector: [PG.selectorGeo(), mVC],
+    rail: [PG.railGeo(), mRail], button: [PG.buttonGeo(), mPlastic], bezel: [PG.bezelGeo(), mPlastic], selector: [PG.selectorGeo(), mPlastic],
     emerg: [PG.emergGeo(), mVC], meter: [PG.meterGeo(), mVC], screw: [PG.screwGeo(), mRail], box: [PG.unitBox(), mVC], plug: [PG.plugGeo(), mVC],
-    k3rt: [PG.contactor3rtGeo(), mVC], ctd: [PG.ctdGeo(), mVC], tall: [PG.tallRelayGeo(false), mVC], tallD: [PG.tallRelayGeo(true), mVC],
-    brk3: [PG.breakerNGeo(3, false), mVC], dr4: [PG.breakerNGeo(4, true), mVC],
+    // 3º item = geometria dos parafusos (InstancedMesh metálica gêmea, mesmas matrizes); brk3/dr4 compensam a escala do layout (1.8/1.5 × 1.04)
+    k3rt: [PG.contactor3rtGeo(), mPlastic, PG.contactor3rtGeo('m')], ctd: [PG.ctdGeo(), mPlastic, PG.ctdGeo('m')],
+    tall: [PG.tallRelayGeo(false), mPlastic, PG.tallRelayGeo(false, 'm')], tallD: [PG.tallRelayGeo(true), mPlastic, PG.tallRelayGeo(true, 'm')],
+    brk3: [PG.breakerNGeo(3, false, 'p', 1.8, 1.04), mPlastic, PG.breakerNGeo(3, false, 'm', 1.8, 1.04)],
+    dr4: [PG.breakerNGeo(4, true, 'p', 1.5, 1.04), mPlastic, PG.breakerNGeo(4, true, 'm', 1.5, 1.04)],
     tube: [PG.box(1, 1, 1, 0, 0, 0, 0xffffff), mTube], foot: [PG.cylZ(0.022, 0.018, 0, 0x202020, 12), mVC],
   };
   for (const k of ['red', 'blue', 'green']) defs['disp_' + k] = [PG.displayPlane(), dispMat[k]];
@@ -391,8 +397,9 @@ export function buildBenches(scene, ctx) {
   // ---------- cria as InstancedMesh ----------
   for (const k in defs) {
     const L = inst[k].m.length; if (!L) continue;
-    const [geo, mat] = defs[k];
+    const [geo, mat, geoM] = defs[k];
     const im = new THREE.InstancedMesh(geo, mat, L); im.name = 'bench_' + k;
+    if (geoM) { const mm = new THREE.InstancedMesh(geoM, mMetal, L); mm.name = 'bench_' + k + '_metal'; for (let i = 0; i < L; i++) mm.setMatrixAt(i, inst[k].m[i]); mm.instanceMatrix.needsUpdate = true; mm.computeBoundingSphere(); g.add(mm); }
     for (let i = 0; i < L; i++) { im.setMatrixAt(i, inst[k].m[i]); im.setColorAt(i, inst[k].c[i]); }
     im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true;
     im.computeBoundingSphere();
