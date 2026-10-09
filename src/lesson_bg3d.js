@@ -111,7 +111,9 @@ export function build3DBackground(panel, view) {
   const pr = R.getPixelRatio(), size = R.getSize(new V3());
   R.setPixelRatio(1); R.setSize(rw, rh, false); R.setRenderTarget(null); R.setScissorTest(false); R.setViewport(0, 0, rw, rh);
   R.clippingPlanes = [];
+  const fm = f.faceMesh; if (fm) { fm.mesh.material.map = fm.texClean; fm.mesh.material.needsUpdate = true; }
   R.render(scene, cam);
+  if (fm) { fm.mesh.material.map = fm.tex; fm.mesh.material.needsUpdate = true; }
   const shot = document.createElement('canvas'); shot.width = rw; shot.height = rh;
   shot.getContext('2d').drawImage(R.domElement, 0, 0, rw, rh, 0, 0, rw, rh);
   R.setPixelRatio(pr); R.setSize(size.x, size.y, false);
@@ -141,5 +143,8 @@ export function build3DBackground(panel, view) {
       fan = { x, y, r: Math.abs(y2 - y) };
     }
   }
-  return { canvas: c, k, snapped, total: lj.length, fan };
+  // textos da face (vetoriais na aula): posição em mm e tamanho da letra em mm
+  const sy = Math.abs(1 / A[1][1]);
+  const texts = fm ? (f.textsW || []).map((r) => { const p = r.pos.clone().applyMatrix4(inv); const [x, y] = unmap(p.x, p.y); const x2 = r.pos2 ? unmap(...(() => { const q = r.pos2.clone().applyMatrix4(inv); return [q.x, q.y]; })())[0] : null; return { t: r.t, x, y, fs: r.s * sy, w: r.w, color: r.color, title: !!r.title, x2 }; }) : [];
+  return { canvas: c, k, snapped, total: lj.length, fan, texts, sx: Math.abs(1 / A[0][0]) };
 }

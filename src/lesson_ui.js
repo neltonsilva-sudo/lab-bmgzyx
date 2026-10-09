@@ -1,9 +1,9 @@
 // DONO: agente "aula-pratica". Segunda tela (tela cheia) com o painel KET-1030 funcional: cabos de teste, botoeiras,
 // medidores, multímetro, procedimento NR-10, roteiros com verificação automática, defeitos e relatório.
-import { createSim, fmtA } from './lesson_sim.js?v=20261009091201';
-import { getPanel, JACK_COL } from './lesson_panels.js?v=20261009091201';
-import { build3DBackground } from './lesson_bg3d.js?v=20261009091201';
-import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261009091201';
+import { createSim, fmtA } from './lesson_sim.js?v=20261009092129';
+import { getPanel, JACK_COL } from './lesson_panels.js?v=20261009092129';
+import { build3DBackground } from './lesson_bg3d.js?v=20261009092129';
+import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261009092129';
 
 const CABLE = { R: ['#d11f1f', '#7a0d0d', 'vermelho'], K: ['#202020', '#000', 'preto'], B: ['#1f56c9', '#0d2a6e', 'azul'], Y: ['#f0c419', '#8a6d05', 'amarelo'], W: ['#f2f2ee', '#8d8d86', 'branco'], G: ['#1f9a3c', '#0b4a1a', 'verde'] };
 const NS = 'http://www.w3.org/2000/svg';
@@ -218,6 +218,41 @@ export function createLessonScreen(opts = {}) {
     jackEls.set(j.id, g);
   }
 
+  // ---------- textos da face (vetoriais, nítidos em qualquer zoom) sem sobrepor bornes nem outros textos ----------
+  if (bg3d && bg3d.texts && bg3d.texts.length) {
+    const gT = el('g', { 'pointer-events': 'none', class: 'ftx' }, svg);
+    svg.insertBefore(gT, gW);
+    const jk = panel.jacks.filter((j) => !j.ext).map((j) => [j.x, j.y]);
+    const placed = [];
+    const ctx2 = document.createElement('canvas').getContext('2d');
+    const widthOf = (t, fs, w) => { ctx2.font = `${w} ${fs}px Arial, Helvetica, sans-serif`; return ctx2.measureText(t).width; };
+    const hitsJack = (x0, y0, x1, y1) => jk.some(([x, y]) => { const cx = Math.max(x0, Math.min(x, x1)), cy = Math.max(y0, Math.min(y, y1)); return (cx - x) ** 2 + (cy - y) ** 2 < 8.5 * 8.5; });
+    const hitsText = (x0, y0, x1, y1) => placed.some((r) => !(x1 < r[0] || x0 > r[2] || y1 < r[1] || y0 > r[3]));
+    // títulos e nomes grandes primeiro; rótulos curtos (bornes) depois
+    const list = [...bg3d.texts].sort((a, b) => (b.title - a.title) || (b.fs - a.fs));
+    let html = '';
+    for (const r of list) {
+      let fs = Math.max(r.fs * (r.t.length <= 3 ? 0.86 : 0.92), 7);
+      const wd = r.title ? Math.abs(r.x2 - r.x) : widthOf(r.t, fs, r.w);
+      const h = fs * 0.8;
+      if (r.title) { html += `<text x="${r.x.toFixed(1)}" y="${r.y.toFixed(1)}" dominant-baseline="central" textLength="${wd.toFixed(1)}" lengthAdjust="spacingAndGlyphs" font-size="${fs.toFixed(1)}" font-weight="600" fill="${r.color}" font-family="DIN Condensed, Arial Narrow, Arial, sans-serif">${esc(r.t)}</text>`; placed.push([r.x, r.y - h / 2, r.x + wd, r.y + h / 2]); continue; }
+      // posição original e alternativas próximas, a primeira livre vence
+      const cands = [[0, 0], [0, -6], [0, 6], [0, -10], [0, 10], [-wd / 2 - 9, 0], [wd / 2 + 9, 0], [0, -14], [0, 14], [-wd / 2 - 9, -7], [wd / 2 + 9, -7], [-wd / 2 - 9, 7], [wd / 2 + 9, 7], [wd / 2 + 11, 0], [-wd / 2 - 11, 0], [0, -18], [0, 18], [wd / 2 + 12, -10], [-wd / 2 - 12, -10], [wd / 2 + 12, 10], [-wd / 2 - 12, 10]];
+      let best = null;
+      for (let pass = 0; pass < 3 && !best; pass++) {
+        for (const [dx, dy] of cands) {
+          const cx = r.x + dx, cy = r.y + dy, x0 = cx - wd / 2 - 0.6, x1 = cx + wd / 2 + 0.6, y0 = cy - h / 2 - 0.4, y1 = cy + h / 2 + 0.4;
+          if (!hitsJack(x0, y0, x1, y1) && !hitsText(x0, y0, x1, y1)) { best = [cx, cy, x0, y0, x1, y1]; break; }
+        }
+        if (!best) { fs *= 0.86; }
+      }
+      if (!best) best = [r.x, r.y, r.x - wd / 2, r.y - h / 2, r.x + wd / 2, r.y + h / 2];
+      placed.push(best.slice(2));
+      html += `<text x="${best[0].toFixed(1)}" y="${best[1].toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="${fs.toFixed(1)}" font-weight="${r.w}" fill="${r.color}" font-family="Arial, Helvetica, sans-serif" paint-order="stroke" stroke="${/^#(f|e|d)/i.test(r.color) ? 'rgba(0,0,0,.55)' : 'rgba(255,250,225,.85)'}" stroke-width="${(fs * 0.14).toFixed(2)}">${esc(r.t)}</text>`;
+    }
+    gT.innerHTML = html;
+  }
+
   // ---------- widgets ----------
   const W = [];
   const lampColor = { R: ['#ff3b28', '#7d1a12'], G: ['#4dff6a', '#1d6b2a'], Y: ['#ffe03a', '#b89a14'] };
@@ -418,7 +453,7 @@ export function createLessonScreen(opts = {}) {
       });
       h += `<circle cx="${e[0]}" cy="${e[1]}" r="9" fill="#777" stroke="#333"/><g transform="translate(${e[0] - 14},${e[1] - 16})"><rect x="-118" y="-9" width="122" height="14" rx="3" fill="rgba(255,255,255,.92)" stroke="#1d5b2a" stroke-width=".6"/><text x="0" y="1.5" text-anchor="end" font-size="8.5" font-weight="700" fill="#1d5b2a" font-family="Arial">aterramento temporário → terra da estrutura</text></g>`;
     }
-    if (n.sign) h += `<g transform="translate(1250,880) rotate(-2)"><rect x="-120" y="-34" width="240" height="68" rx="5" fill="#fff" stroke="#c62828" stroke-width="5"/><rect x="-120" y="-34" width="240" height="22" fill="#c62828"/><text y="-18" text-anchor="middle" font-size="13" font-weight="800" fill="#fff" font-family="Arial">PERIGO</text><text y="6" text-anchor="middle" font-size="12.5" font-weight="800" fill="#1e2a3a" font-family="Arial">EM MANUTENÇÃO</text><text y="24" text-anchor="middle" font-size="12.5" font-weight="800" fill="#c62828" font-family="Arial">NÃO ENERGIZE</text></g>`;
+    if (n.sign) h += `<g transform="translate(1250,${bg3d ? 958 : 880}) rotate(-2)"><rect x="-120" y="-34" width="240" height="68" rx="5" fill="#fff" stroke="#c62828" stroke-width="5"/><rect x="-120" y="-34" width="240" height="22" fill="#c62828"/><text y="-18" text-anchor="middle" font-size="13" font-weight="800" fill="#fff" font-family="Arial">PERIGO</text><text y="6" text-anchor="middle" font-size="12.5" font-weight="800" fill="#1e2a3a" font-family="Arial">EM MANUTENÇÃO</text><text y="24" text-anchor="middle" font-size="12.5" font-weight="800" fill="#c62828" font-family="Arial">NÃO ENERGIZE</text></g>`;
     gN.innerHTML = h;
   }
   function renderNR() {

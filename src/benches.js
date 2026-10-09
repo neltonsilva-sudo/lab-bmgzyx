@@ -2,10 +2,10 @@
 // chapa perfurada, prateleira inclinada, estrutura tubular, cabos de teste pendurados, cabos descendo do teto).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { BENCH_ROW, BENCHES, ROOM } from './layout.js?v=20261009091201';
-import * as TX from './benches_tex.js?v=20261009091201';
-import * as PG from './benches_parts.js?v=20261009091201';
-import { LAYOUTS, TITLES } from './benches_layouts.js?v=20261009091201';
+import { BENCH_ROW, BENCHES, ROOM } from './layout.js?v=20261009092129';
+import * as TX from './benches_tex.js?v=20261009092129';
+import * as PG from './benches_parts.js?v=20261009092129';
+import { LAYOUTS, TITLES } from './benches_layouts.js?v=20261009092129';
 
 const LW = 1.73, LH = 0.93;            // face nominal do layout (m)
 const JC = { K: 0x161616, R: 0xc41c1c, W: 0xe4e4dc, B: 0x1c4fc8, Y: 0xe8bf12, G: 0x1f9a3c };
@@ -32,7 +32,7 @@ const INFO = {
 export function buildBenches(scene, ctx) {
   const renderer = ctx && ctx.renderer, q = (ctx && ctx.q) || 'high', low = q === 'low';
   const g = new THREE.Group(); g.name = 'benches';
-  const hotspots = [], faces = [], jacksW = {};
+  const hotspots = [], faces = [], jacksW = {}, textsW = {}, faceMeshes = {};
   const pitch = Math.abs(BENCH_ROW.pitch);
   const PW = Math.min((BENCH_ROW.width || 1.8) + 0.02, pitch - 0.03);   // largura real do painel (quase encostados, como na foto)
   // O painel é modelado em escala nominal (1,8 x 1,0 m) e reduzido uniformemente para a largura do layout.
@@ -246,8 +246,18 @@ export function buildBenches(scene, ctx) {
         }
       },
     };
+    // b1: textos da face numa camada separada (A.PL) → a aula prática usa a face sem textos e desenha os textos nítidos
+    if (b.id === 'b1' && !low) { A.PL = TX.facePainter(LW, LH, ppm); A.texts = []; }
     LAYOUTS[b.id](A);
-    const tex = TX.texFrom(P.c, renderer); faceMat.map = tex; faceMat.needsUpdate = true;
+    let tex, texClean = null;
+    if (A.PL) {
+      const comp = document.createElement('canvas'); comp.width = P.c.width; comp.height = P.c.height;
+      const cg = comp.getContext('2d'); cg.drawImage(P.c, 0, 0); cg.drawImage(A.PL.c, 0, 0);
+      tex = TX.texFrom(comp, renderer); texClean = TX.texFrom(P.c, renderer);
+      textsW[b.id] = A.texts.map((r) => ({ ...r, pos: new THREE.Vector3(px(r.x), py(r.y), 0).applyMatrix4(BM), pos2: r.x2 != null ? new THREE.Vector3(px(r.x2), py(r.y), 0).applyMatrix4(BM) : null }));
+      faceMeshes[b.id] = { mesh: face, tex, texClean };
+    } else tex = TX.texFrom(P.c, renderer);
+    faceMat.map = tex; faceMat.needsUpdate = true;
 
     }
     // ---------- estrutura inferior (unidades reais) ----------
@@ -312,7 +322,7 @@ export function buildBenches(scene, ctx) {
     // âncora da face para outros módulos (aula prática): origem no canto inferior esquerdo, x→direita, y→cima, z→fora; metros
     const FWw = (NPW - 0.08) * PS, FHw = 0.92 * PS;
     const faceAnchor = new THREE.Object3D(); faceAnchor.name = 'face_' + b.id; faceAnchor.position.set(-FWw / 2, PB + 0.04 * PS, 0.001); bench.add(faceAnchor);
-    faces.push({ id: b.id, face: faceAnchor, width: FWw, height: FHw, jacksW: jacksW[b.id] || [],
+    faces.push({ id: b.id, face: faceAnchor, width: FWw, height: FHw, jacksW: jacksW[b.id] || [], textsW: textsW[b.id] || [], faceMesh: faceMeshes[b.id] || null,
       layoutToFace: (fx, fy) => ({ x: (fx * SX) * PS + FWw / 2, y: (fy + 0.46) * PS }) });
 
     // hotspot

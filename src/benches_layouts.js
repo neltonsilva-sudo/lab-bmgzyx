@@ -1,7 +1,7 @@
 // DONO: agente "bancadas". Layout de cada painel didático, reproduzido a partir de refs/foto1_full.jpg (recortes).
 // Coordenadas da face em metros: x ∈ [-0.865, 0.865] (esq→dir para quem olha o painel), y ∈ [-0.465, 0.465].
 // A API "A" pinta a serigrafia no canvas e instancia as peças 3D nos mesmos pontos (ver benches.js).
-import { paintYellowBg, paintWhiteBg, paintB1Bg, rng } from './benches_tex.js?v=20261009091201';
+import { paintYellowBg, paintWhiteBg, paintB1Bg, rng } from './benches_tex.js?v=20261009092129';
 
 export const TITLES = {
   b1: 'KET-1030: Proteção', b2: 'KET 1070: Industrial', b3: 'KET-1050: Proteção', b4: 'KET-1050: Proteção', b5: 'KET-1020: Comandos Elétricos',
@@ -14,12 +14,14 @@ const X = (p) => (p - 510) * 0.0018602, Y = (p) => (718 - p) * 0.0016034;
 function b1(A) {
   const P = A.P, g = P.g;
   paintB1Bg(P, X, Y);
-  const L = (t, px, py, s = 0.0135, o = {}) => P.text(t, X(px), Y(py), s, { weight: 700, color: '#222', ...o });
+  const TP = A.PL || P; // camada de textos (separada na b1 para a aula prática)
+  const L = (t, px, py, s = 0.0135, o = {}) => { TP.text(t, X(px), Y(py), s, { weight: 700, color: '#222', ...o }); if (A.texts) A.texts.push({ t, x: X(px), y: Y(py), s, w: o.weight || 700, color: o.color || '#222' }); };
   const J = (px, py, c = 'K', tag) => A.jack(X(px), Y(py), c, undefined, tag);
   const row = (xs, py, cols, labs, ly) => xs.forEach((x, i) => { J(x, py, cols[i], labs && labs[i]); if (labs && labs[i]) L(labs[i], x, ly ?? py - 10, 0.0125); });
   // título sobre etiqueta clara
   g.save(); g.fillStyle = 'rgba(255,255,248,0.55)'; g.fillRect(P.X(X(116)), P.Y(Y(440)), P.S(X(360) - X(116)), P.S(Y(440) - Y(469))); g.restore();
-  P.text('KET-1030: Proteção', X(123), Y(455), 0.046, { align: 'left', weight: 600, color: '#242424', w: X(353) - X(123), font: '"DIN Condensed","Arial Narrow",Arial,sans-serif' });
+  TP.text('KET-1030: Proteção', X(123), Y(455), 0.046, { align: 'left', weight: 600, color: '#242424', w: X(353) - X(123), font: '"DIN Condensed","Arial Narrow",Arial,sans-serif' });
+  if (A.texts) A.texts.push({ t: 'KET-1030: Proteção', x: X(123), y: Y(455), s: 0.046, w: 600, color: '#242424', title: true, x2: X(353) });
   // fitas crepe (marcas de uso)
   for (const [x, y, w, h, a] of []) { // removidas a pedido
     g.save(); g.translate(P.X(X(x)), P.Y(Y(y))); g.rotate(a); g.fillStyle = 'rgba(214,196,160,0.85)'; g.fillRect(-P.S(w * 0.00186) / 2, -P.S(h * 0.0016) / 2, P.S(w * 0.00186), P.S(h * 0.0016)); g.restore();
