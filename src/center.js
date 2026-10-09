@@ -2,11 +2,11 @@
 // com módulos azuis de instrumentos), segunda mesa em L, painéis fotovoltaicos em carrinhos.
 // Posições derivadas de layout.js (CENTER.bench = centro da mesa principal; SOLAR = painéis). Frente da bancada voltada para +z.
 import * as THREE from 'three';
-import { CENTER, SOLAR } from './layout.js?v=20261009092129';
-import { makeEnv, roughMap, Batch } from './center_lib.js?v=20261009092129';
-import { topColor, scuffTex } from './center_tex.js?v=20261009092129';
-import { buildBench, buildLTable } from './center_bench.js?v=20261009092129';
-import { buildSolar } from './center_solar.js?v=20261009092129';
+import { CENTER, SOLAR } from './layout.js?v=20261009092323';
+import { makeEnv, roughMap, Batch } from './center_lib.js?v=20261009092323';
+import { topColor, scuffTex } from './center_tex.js?v=20261009092323';
+import { buildBench, buildLTable } from './center_bench.js?v=20261009092323';
+import { buildSolar } from './center_solar.js?v=20261009092323';
 
 function materials(env, q) {
   const S = (o) => new THREE.MeshStandardMaterial(o);

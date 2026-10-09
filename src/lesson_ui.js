@@ -1,9 +1,9 @@
 // DONO: agente "aula-pratica". Segunda tela (tela cheia) com o painel KET-1030 funcional: cabos de teste, botoeiras,
 // medidores, multímetro, procedimento NR-10, roteiros com verificação automática, defeitos e relatório.
-import { createSim, fmtA } from './lesson_sim.js?v=20261009092129';
-import { getPanel, JACK_COL } from './lesson_panels.js?v=20261009092129';
-import { build3DBackground } from './lesson_bg3d.js?v=20261009092129';
-import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261009092129';
+import { createSim, fmtA } from './lesson_sim.js?v=20261009092323';
+import { getPanel, JACK_COL } from './lesson_panels.js?v=20261009092323';
+import { build3DBackground } from './lesson_bg3d.js?v=20261009092323';
+import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261009092323';
 
 const CABLE = { R: ['#d11f1f', '#7a0d0d', 'vermelho'], K: ['#202020', '#000', 'preto'], B: ['#1f56c9', '#0d2a6e', 'azul'], Y: ['#f0c419', '#8a6d05', 'amarelo'], W: ['#f2f2ee', '#8d8d86', 'branco'], G: ['#1f9a3c', '#0b4a1a', 'verde'] };
 const NS = 'http://www.w3.org/2000/svg';
@@ -242,7 +242,7 @@ export function createLessonScreen(opts = {}) {
       for (let pass = 0; pass < 3 && !best; pass++) {
         for (const [dx, dy] of cands) {
           const cx = r.x + dx, cy = r.y + dy, x0 = cx - wd / 2 - 0.6, x1 = cx + wd / 2 + 0.6, y0 = cy - h / 2 - 0.4, y1 = cy + h / 2 + 0.4;
-          if (!hitsJack(x0, y0, x1, y1) && !hitsText(x0, y0, x1, y1)) { best = [cx, cy, x0, y0, x1, y1]; break; }
+          if (y1 < FH + 34 && x0 > 4 && x1 < FW - 4 && !hitsJack(x0, y0, x1, y1) && !hitsText(x0, y0, x1, y1)) { best = [cx, cy, x0, y0, x1, y1]; break; }
         }
         if (!best) { fs *= 0.86; }
       }
@@ -282,7 +282,7 @@ export function createLessonScreen(opts = {}) {
       g.innerHTML = `<rect x="-50" y="-67" width="101" height="134" fill="transparent"/>` + [-33.7, 0, 33.7].map((x) => `<rect class="lev" x="${x - 6}" y="-14" width="12" height="20" rx="2" fill="#151515"/>`).join('') +
         `<text class="st" x="0" y="54" text-anchor="middle" font-size="8.5" font-weight="800" font-family="Arial"></text><g class="lock" opacity="0"><path d="M-8 -30 v-8 a8 8 0 0 1 16 0 v8" fill="none" stroke="#c9a640" stroke-width="3"/><rect x="-11" y="-31" width="22" height="18" rx="2" fill="#d23b2b" stroke="#7a1a12"/><rect x="14" y="-28" width="34" height="46" rx="2" fill="#fff" stroke="#c62828" stroke-width="2"/><text x="31" y="-15" text-anchor="middle" font-size="5.5" font-weight="800" fill="#c62828" font-family="Arial">PERIGO</text><text x="31" y="-5" text-anchor="middle" font-size="4.6" font-weight="700" fill="#222" font-family="Arial">NÃO</text><text x="31" y="2" text-anchor="middle" font-size="4.6" font-weight="700" fill="#222" font-family="Arial">LIGUE</text></g>`;
     } else if (w.type === 'key') {
-      g.innerHTML = `<circle r="14" fill="#222" filter="url(#fSh)"/><circle r="10.5" fill="#111" stroke="#555"/><g class="kb"><rect x="-2.5" y="-9" width="5" height="18" rx="1" fill="#c9a640"/><circle cx="0" cy="-12" r="5" fill="#c9a640" stroke="#7a6420"/></g><path class="tag" d="M0 12 l-4 30 h10 z" fill="#e2c79a" stroke="#a88"/><text class="kt" x="18" y="4" font-size="7" font-weight="700" fill="#1a7f3c" font-family="Arial"></text>`;
+      g.innerHTML = `<circle r="14" fill="#222" filter="url(#fSh)"/><circle r="10.5" fill="#111" stroke="#555"/><g class="kb"><rect x="-2.5" y="-9" width="5" height="18" rx="1" fill="#c9a640"/><circle cx="0" cy="-12" r="5" fill="#c9a640" stroke="#7a6420"/></g><path class="tag" d="M0 12 l-4 30 h10 z" fill="#e2c79a" stroke="#a88"/><text class="kt" x="0" y="-20" text-anchor="middle" font-size="7.5" font-weight="700" fill="#1a7f3c" font-family="Arial" paint-order="stroke" stroke="rgba(255,250,225,.9)" stroke-width="1.6"></text>`;
     } else if (w.type === 'dr') {
       g.innerHTML = `<rect x="-59" y="-66" width="118" height="132" fill="transparent"/><rect x="34" y="-28" width="14" height="30" rx="2" fill="#151515"/><rect class="lev" x="36" y="-26" width="10" height="13" rx="1.5" fill="#333"/><rect x="5" y="22" width="12" height="9" rx="1" fill="#2a2a2a"/><text x="11" y="40" text-anchor="middle" font-size="5" font-weight="700" fill="#222" font-family="Arial">T</text><text class="st" x="0" y="58" text-anchor="middle" font-size="8.5" font-weight="800" font-family="Arial"></text>`;
     } else if (w.type === 'gst') {

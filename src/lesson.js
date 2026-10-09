@@ -1,7 +1,7 @@
 // DONO: agente "aula-pratica". Modo de aula prática: segunda tela em tela cheia com o painel KET-1030 funcional
 // (ligação de cabos, energização com procedimento NR-10, simulação elétrica, roteiros e relatório).
 // Chamado pelo ui.js: buildLesson(ctx) → { open(benchId), close(), isOpen(), update(dt) }
-import { createLessonScreen } from './lesson_ui.js?v=20261009092129';
+import { createLessonScreen } from './lesson_ui.js?v=20261009092323';
 
 export function buildLesson(ctx = {}) {
   let scr = null;

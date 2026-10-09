@@ -131,6 +131,15 @@ export function build3DBackground(panel, view) {
   g.imageSmoothingQuality = 'high';
   g.drawImage(shot, 0, 0);
   g.setTransform(1, 0, 0, 1, 0, 0);
+  // painel ampliado para baixo: estende a face amarela 38 mm (os rótulos da última fileira ficam dentro do amarelo)
+  { const EXT = 38, px = (x) => (x - VX) * k, py = (y) => (y - VY) * k;
+    const samp = (x) => { const d = g.getImageData(Math.round(px(x)), Math.round(py(FH - 6)), 1, 1).data; return `rgb(${d[0]},${d[1]},${d[2]})`; };
+    const gr = g.createLinearGradient(px(0), 0, px(FW), 0); [0.02, 0.25, 0.5, 0.75, 0.98].forEach((t) => gr.addColorStop(t, samp(FW * t)));
+    g.fillStyle = gr; g.fillRect(px(0), py(FH - 3), px(FW) - px(0), (EXT + 3) * k);
+    const sh = g.createLinearGradient(0, py(FH + EXT - 10), 0, py(FH + EXT)); sh.addColorStop(0, 'rgba(90,70,30,0)'); sh.addColorStop(1, 'rgba(90,70,30,.18)');
+    g.fillStyle = sh; g.fillRect(px(0), py(FH + EXT - 10), px(FW) - px(0), 10 * k);
+    g.fillStyle = '#8f949a'; g.fillRect(px(0) - 2 * k, py(FH + EXT), px(FW) - px(0) + 4 * k, 1.6 * k);
+    g.fillStyle = '#d3d6d9'; g.fillRect(px(0) - 2 * k, py(FH + EXT + 1.6), px(FW) - px(0) + 4 * k, 22 * k); }
 
   // posição do disco da ventoinha do motor 3D (para animar na aula)
   let fan = null;
