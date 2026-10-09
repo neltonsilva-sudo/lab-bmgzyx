@@ -1,7 +1,7 @@
 // DONO: agente "bancadas". Layout de cada painel didático, reproduzido a partir de refs/foto1_full.jpg (recortes).
 // Coordenadas da face em metros: x ∈ [-0.865, 0.865] (esq→dir para quem olha o painel), y ∈ [-0.465, 0.465].
 // A API "A" pinta a serigrafia no canvas e instancia as peças 3D nos mesmos pontos (ver benches.js).
-import { paintYellowBg, paintWhiteBg, paintB1Bg, rng } from './benches_tex.js?v=20261008201615';
+import { paintYellowBg, paintWhiteBg, paintB1Bg, rng } from './benches_tex.js?v=20261009091201';
 
 export const TITLES = {
   b1: 'KET-1030: Proteção', b2: 'KET 1070: Industrial', b3: 'KET-1050: Proteção', b4: 'KET-1050: Proteção', b5: 'KET-1020: Comandos Elétricos',
@@ -15,8 +15,8 @@ function b1(A) {
   const P = A.P, g = P.g;
   paintB1Bg(P, X, Y);
   const L = (t, px, py, s = 0.0135, o = {}) => P.text(t, X(px), Y(py), s, { weight: 700, color: '#222', ...o });
-  const J = (px, py, c = 'K') => A.jack(X(px), Y(py), c);
-  const row = (xs, py, cols, labs, ly) => xs.forEach((x, i) => { J(x, py, cols[i]); if (labs && labs[i]) L(labs[i], x, ly ?? py - 10, 0.0125); });
+  const J = (px, py, c = 'K', tag) => A.jack(X(px), Y(py), c, undefined, tag);
+  const row = (xs, py, cols, labs, ly) => xs.forEach((x, i) => { J(x, py, cols[i], labs && labs[i]); if (labs && labs[i]) L(labs[i], x, ly ?? py - 10, 0.0125); });
   // título sobre etiqueta clara
   g.save(); g.fillStyle = 'rgba(255,255,248,0.55)'; g.fillRect(P.X(X(116)), P.Y(Y(440)), P.S(X(360) - X(116)), P.S(Y(440) - Y(469))); g.restore();
   P.text('KET-1030: Proteção', X(123), Y(455), 0.046, { align: 'left', weight: 600, color: '#242424', w: X(353) - X(123), font: '"DIN Condensed","Arial Narrow",Arial,sans-serif' });
@@ -29,17 +29,17 @@ function b1(A) {
   L('LIGA', 85, 533); A.btn(X(88), Y(559), 'G', null, 1.35); L('CH1', 64, 558, 0.011); J(114, 550); J(115, 568);
   L('DESL', 89, 589); A.btn(X(91), Y(611), 'R', null, 1.35); L('CH2', 66, 610, 0.011); J(117, 601); J(119, 619);
   L('SN1', 64, 655, 0.011); L('(220Vca)', 64, 663, 0.010); A.lamp(X(95), Y(662), 'Y', null, 1.35, false); J(121, 653); J(123, 670);
-  row([83, 99, 116], 735, 'KKK', ['NA', 'C', 'NF'], 723);
+  [83, 99, 116].forEach((x, i) => { J(x, 735, 'K', 'CH5:' + ['NA', 'C', 'NF'][i]); L(['NA', 'C', 'NF'][i], x, 723, 0.0125); });
   for (const x of [83, 99, 116]) P.line([[X(x), Y(738)], [X(103), Y(752)]], 0.0022, '#222');
   A.sel(X(103), Y(765), 1.45, -0.35); L('CH5', 132, 765, 0.011);
   // temporizadores CTD-02 / CTD-03
   for (const [bx, by, top, name] of [[260, 558, 526, 'CTD-02'], [265, 674, 633, 'CTD-03']]) {
     const x0 = bx - 27;
-    row([0, 1, 2, 3, 4].map((i) => x0 + i * 17), top, 'KKKKK', ['1', '2', '3', '4', '5']);
+    [0, 1, 2, 3, 4].forEach((i) => { J(x0 + i * 17, top, 'K', `${name}:${i + 1}`); L(String(i + 1), x0 + i * 17, top - 10, 0.0125); });
     A.ctd(X(bx), Y(by));
     L(name, bx - 46, by - 31, 0.0115); L('(220Vca)', bx - 48, by - 23, 0.0105);
-    [0, 1, 2].forEach((i) => { J(bx + 43, by - 16 + i * 17.5, 'RRK'[i]); L(String(6 + i), bx + 54, by - 16 + i * 17.5, 0.0115); });
-    [0, 1, 2, 3, 4].forEach((i) => { J(x0 + 4 + i * 16.7, by + 43, 'YYYRK'[i]); L(String(9 + i), x0 + 4 + i * 16.7, by + 53, 0.0115); });
+    [0, 1, 2].forEach((i) => { J(bx + 43, by - 16 + i * 17.5, 'RRK'[i], `${name}:${6 + i}`); L(String(6 + i), bx + 54, by - 16 + i * 17.5, 0.0115); });
+    [0, 1, 2, 3, 4].forEach((i) => { J(x0 + 4 + i * 16.7, by + 43, 'YYYRK'[i], `${name}:${9 + i}`); L(String(9 + i), x0 + 4 + i * 16.7, by + 53, 0.0115); });
   }
   // auto-transformador
   L('AUTO-TRANSFORMADOR', 482, 474, 0.0135);
@@ -68,8 +68,8 @@ function b1(A) {
   A.rail(X(418), X(942), Y(658), 1.25);
   [444, 546, 650, 752, 857].forEach((x0, k) => {
     const xs = [0, 1, 2, 3, 4].map((i) => x0 + i * 16.8);
-    row(xs, 604.6, 'KWRKR', ['L1', 'L2', 'L3', 'NO', 'A1'], 595);
-    row(xs, 719, 'KWRKR', ['T1', 'T2', 'T3', 'NO', 'A2'], 729);
+    xs.forEach((x, i) => { J(x, 604.6, 'KWRKR'[i], `K${k + 1}:` + ['L1', 'L2', 'L3', 'NO', 'A1'][i]); L(['L1', 'L2', 'L3', 'NO', 'A1'][i], x, 595, 0.0125); });
+    xs.forEach((x, i) => { J(x, 719, 'KWRKR'[i], `K${k + 1}:` + ['T1', 'T2', 'T3', 'NO', 'A2'][i]); L(['T1', 'T2', 'T3', 'NO', 'A2'][i], x, 729, 0.0125); });
     L(`K${k + 1} (220Vca)`, x0 - 4, 629, 0.012);
     A.k3rt(X(x0 + 34), Y(662.7), xs.map((x) => X(x)), Y(604.6), Y(719));
   });
@@ -89,19 +89,20 @@ function b1(A) {
   // RCA / RPT / FSN / RST
   const relay = (bx, by, sx, name, tops, topY, topL, mids, bots, dark) => {
     A.dev(dark ? 'tallD' : 'tall', X(bx), Y(by), sx, 1.0);
-    L(name, bx - 20, by - 31, 0.0105); L('(220Vca)', bx - 20, by - 23, 0.0098);
-    tops.forEach(([x, c, t]) => { J(x, topY, c); L(t, x, topY - 10, 0.0115); });
-    if (mids) mids.forEach(([x, c, t]) => { J(x, 858, c); L(t, x, 849, 0.0115); });
-    bots.forEach(([x, y, c, t]) => { J(x, y, c); L(t, x, y + 10, 0.0105); });
+    L(name, bx - 37, by - 27, 0.009); L('(220Vca)', bx - 37, by - 20, 0.0084);
+    const dk = `${name}@${bx}:`;
+    tops.forEach(([x, c, t]) => { J(x, topY, c, dk + t); L(t, x, topY - 10, 0.0115); });
+    if (mids) mids.forEach(([x, c, t]) => { J(x, 858, c, dk + t); L(t, x, 849, 0.0115); });
+    bots.forEach(([x, y, c, t]) => { J(x, y, c, dk + t); L(t, x, y + 8.6, 0.0082); });
     A.relayWires(X(bx), Y(by), tops.map(([x]) => X(x)), Y(mids ? 858 : topY));
   };
   relay(304, 922, 1.4, 'RCA-01', [[297, 'R', 'A1'], [312, 'R', 'A2']], 840, 0, [[297, 'K', '-IN'], [312, 'K', '+IN']], [[301, 969, 'K', 'J'], [317, 969, 'K', 'R'], [301, 989, 'K', '14'], [317, 989, 'K', '11'], [332, 989, 'K', '12']]);
   relay(369, 918, 1.25, 'RPT-01', [[359, 'R', 'A1'], [375, 'R', 'A2'], [391, 'K', 'C']], 840, 0, [[359, 'K', 'P1'], [375, 'K', 'P2'], [391, 'K', 'P3']], [[361, 970, 'K', '14'], [377, 970, 'K', '11'], [393, 970, 'K', '12']]);
   // FSN-22: só os jumpers (sem módulo)
-  [[422, 'K', 'L1'], [438, 'W', 'L2'], [454, 'R', 'L3']].forEach(([x, c, t]) => { J(x, 842, c); L(t, x, 832, 0.0115); });
-  [[438, 'J'], [454, 'N']].forEach(([x, t]) => { J(x, 858); L(t, x, 849, 0.0115); });
+  [[422, 'K', 'L1'], [438, 'W', 'L2'], [454, 'R', 'L3']].forEach(([x, c, t]) => { J(x, 842, c, 'FSN:' + t); L(t, x, 832, 0.0115); });
+  [[438, 'J'], [454, 'N']].forEach(([x, t]) => { J(x, 858, 'K', 'FSN:' + t); L(t, x, 849, 0.0115); });
   L('FSN-22', 412, 888, 0.0105); L('(220Vca)', 412, 896, 0.0098);
-  A.jumpers(X(438), Y(858), X(454), Y(905)); [423, 439, 454].forEach((x, i) => { J(x, 971); L(['14', '11', '12'][i], x, 981, 0.0105); });
+  A.jumpers(X(438), Y(858), X(454), Y(905)); [423, 439, 454].forEach((x, i) => { J(x, 971, 'K', 'FSN:' + ['14', '11', '12'][i]); L(['14', '11', '12'][i], x, 981, 0.0105); });
   A.jumpers(X(428), Y(950), X(450), Y(962));
   relay(499, 922, 1.1, 'RST-21', [[486, 'K', 'L1'], [501, 'W', 'L2'], [517, 'R', 'L3']], 884, 0, null, [[485, 971, 'K', '14'], [501, 971, 'K', '11'], [516, 971, 'K', '12']]);
   // RAX-02 x4, RYD-01, TCS-01

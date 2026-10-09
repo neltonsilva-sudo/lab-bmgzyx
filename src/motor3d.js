@@ -44,13 +44,17 @@ export function buildMotor3D(ctx) {
   np.position.set(0.0, 0.004, z0 + R + 0.0062); root.add(np);
   // eixo e disco de acoplamento (setores amarelo/cinza) saindo pelo lado do furo — é ele que gira
   const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.04, 16), M.steel); shaft.rotation.z = Math.PI / 2; shaft.position.set(-Lb / 2 - 0.03, 0, z0); root.add(shaft);
-  const rot = new THREE.Group(); rot.position.set(-Lb / 2 - 0.048, 0, z0); root.add(rot);
-  for (let i = 0; i < 6; i++) {
-    const s = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.01, 18, 1, false, (i * Math.PI) / 3, Math.PI / 3), i % 2 ? M.lite : M.yel);
-    s.rotation.z = Math.PI / 2; rot.add(s);
-  }
-  const blur = new THREE.Mesh(new THREE.CylinderGeometry(0.0305, 0.0305, 0.0105, 32), new THREE.MeshBasicMaterial({ color: 0xe6dcc0, transparent: true, opacity: 0 }));
-  blur.rotation.z = Math.PI / 2; rot.add(blur);
+  // disco estroboscópico de frente (como na foto): fundo creme com anéis em zigue-zague pretos — girando dá para ver
+  const rot = new THREE.Group(); rot.position.set(-Lb / 2 - 0.03, 0, z0 + 0.012); root.add(rot);
+  const dc = document.createElement('canvas'); dc.width = dc.height = 512; const dg = dc.getContext('2d');
+  const star = (n, r1, r2, off, fill) => { dg.beginPath(); for (let i = 0; i < n * 2; i++) { const a = off + (i * Math.PI) / n, r = i % 2 ? r2 : r1; dg.lineTo(256 + Math.cos(a) * r, 256 + Math.sin(a) * r); } dg.closePath(); dg.fillStyle = fill; dg.fill(); };
+  dg.beginPath(); dg.arc(256, 256, 252, 0, 7); dg.fillStyle = '#efe4c4'; dg.fill(); dg.lineWidth = 6; dg.strokeStyle = '#c9b98e'; dg.stroke();
+  star(24, 226, 176, 0, '#111'); star(24, 196, 150, Math.PI / 24, '#efe4c4'); star(18, 150, 104, 0, '#111'); star(18, 122, 82, Math.PI / 18, '#efe4c4');
+  star(12, 84, 50, 0, '#111'); star(12, 60, 34, Math.PI / 12, '#efe4c4'); dg.beginPath(); dg.arc(256, 256, 16, 0, 7); dg.fillStyle = '#9a8f74'; dg.fill();
+  const dtx = new THREE.CanvasTexture(dc); dtx.colorSpace = THREE.SRGBColorSpace; dtx.anisotropy = 4;
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(0.032, 48), new THREE.MeshStandardMaterial({ map: dtx, roughness: 0.6, metalness: 0.05 }));
+  rot.add(disc);
+  const blur = new THREE.Mesh(new THREE.CircleGeometry(0.0322, 48), new THREE.MeshBasicMaterial({ color: 0x8a8370, transparent: true, opacity: 0 })); blur.position.z = 0.0005; rot.add(blur);
   root.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 
   // contatores K1–K5: o "botão de teste" frontal (armadura) recua e a janela indicadora fica verde quando a bobina energiza
@@ -83,10 +87,10 @@ export function buildMotor3D(ctx) {
       k.arm.position.z = -0.0045 * k.t;
       k.win.material.color.setHex(k.on ? 0x22d35a : 0x2a2f33);
     }
-    spd += (Math.sign(rpm) * Math.min(Math.abs(rpm) / 1736, 1) * 1.6 * Math.PI * 2 - spd) * Math.min(1, dt * 3);
+    spd += (Math.sign(rpm) * Math.min(Math.abs(rpm) / 1736, 1) * 0.9 * Math.PI * 2 - spd) * Math.min(1, dt * 3);
     ang += spd * dt;
-    rot.rotation.x = ang;
-    blur.material.opacity = Math.min(1, Math.abs(spd) / 10) * 0.3;
+    rot.rotation.z = ang;
+    blur.material.opacity = Math.min(1, Math.abs(spd) / 10) * 0.12;
     housing.position.y = Math.abs(rpm) > 50 ? (Math.random() - 0.5) * 0.0004 : 0; // leve vibração ligado
   }
   return { group: root, update, contactorsOn, hotspot: { id: 'm1', titulo: 'Motor M1 · KET-1030', obj: root,

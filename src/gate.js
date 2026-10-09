@@ -5,7 +5,7 @@ const HASH = '894eb8f7765e28c1f245b91adedbcb06cc85353e9a1594b1e7813be2cfad9f17';
 const KEY = 'labtwin.acesso';
 
 const sha = async (t) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map((b) => b.toString(16).padStart(2, '0')).join('');
-const start = () => import('./main.js?v=20261008201615');
+const start = () => import('./main.js?v=20261009091201');
 let ok = /^(localhost|127\.)/.test(location.hostname) && !new URLSearchParams(location.search).has('gate');
 // pede a senha a cada abertura ou recarga da página (nada fica guardado no navegador)
 

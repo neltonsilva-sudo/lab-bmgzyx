@@ -1,7 +1,7 @@
 // DONO: agente "centro-solar". Texturas procedurais (canvas) dos módulos azuis de instrumentos, medidores, mostradores,
 // painel de comando inclinado, fonte de bancada, células fotovoltaicas e tampo fenólico.
 import * as THREE from 'three';
-import { canvas, tex, rng, txt, rrect } from './center_lib.js?v=20261008201615';
+import { canvas, tex, rng, txt, rrect } from './center_lib.js?v=20261009091201';
 
 const NAVY = '#18236e', NAVY2 = '#131c5c';
 const PX = 1400; // pixels por metro nas faces dos módulos

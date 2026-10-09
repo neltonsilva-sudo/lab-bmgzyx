@@ -1,8 +1,9 @@
 // DONO: agente "aula-pratica". Segunda tela (tela cheia) com o painel KET-1030 funcional: cabos de teste, botoeiras,
 // medidores, multímetro, procedimento NR-10, roteiros com verificação automática, defeitos e relatório.
-import { createSim, fmtA } from './lesson_sim.js?v=20261008201615';
-import { getPanel, JACK_COL } from './lesson_panels.js?v=20261008201615';
-import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261008201615';
+import { createSim, fmtA } from './lesson_sim.js?v=20261009091201';
+import { getPanel, JACK_COL } from './lesson_panels.js?v=20261009091201';
+import { build3DBackground } from './lesson_bg3d.js?v=20261009091201';
+import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261009091201';
 
 const CABLE = { R: ['#d11f1f', '#7a0d0d', 'vermelho'], K: ['#202020', '#000', 'preto'], B: ['#1f56c9', '#0d2a6e', 'azul'], Y: ['#f0c419', '#8a6d05', 'amarelo'], W: ['#f2f2ee', '#8d8d86', 'branco'], G: ['#1f9a3c', '#0b4a1a', 'verde'] };
 const NS = 'http://www.w3.org/2000/svg';
@@ -31,7 +32,7 @@ const CSS = `
 .lz-wrap{flex:1;position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 40%,#5d646c,#2c3036);touch-action:none;min-height:0}
 .lz-stage{position:absolute;left:0;top:0;transform-origin:0 0}
 .lz-stage svg.pnl{position:absolute;left:0;top:0;overflow:visible}
-.jk{cursor:crosshair} .jk .hl{fill:none;stroke:none} .jk:hover .hl,.jk.pend .hl{stroke:#1f9bff;stroke-width:3} .jk.net .hl{stroke:#7cc4ff;stroke-width:2;stroke-dasharray:3 2}
+.pnl.bg3d .jk.on3d>*:not(:first-child):not(.hl){display:none} .jk{cursor:crosshair} .jk .hl{fill:none;stroke:none} .jk:hover .hl,.jk.pend .hl{stroke:#1f9bff;stroke-width:3} .jk.net .hl{stroke:#7cc4ff;stroke-width:2;stroke-dasharray:3 2}
 .wd{cursor:pointer} .cb{cursor:pointer} .cb:hover .cbo{stroke:#1f9bff !important}
 .lz-tip{position:fixed;z-index:60;pointer-events:none;background:#1e2a3a;color:#fff;padding:4px 8px;border-radius:4px;font-size:11.5px;max-width:330px;display:none;box-shadow:0 3px 10px rgba(0,0,0,.3)}
 .lz-zoom{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:4px}
@@ -100,6 +101,9 @@ export function createLessonScreen(opts = {}) {
   const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
 
   const panel = getPanel();
+  // fundo 3D: o próprio gêmeo digital do KET-1030 renderizado de frente (câmera fixa); se não der, usa o quadro 2D
+  let bg3d = null;
+  try { if (new URLSearchParams(location.search).get('quadro') !== '2d') bg3d = build3DBackground(panel, { VX: -40, VY: -40, VW: panel.FW + 80, VH: panel.GST.y + panel.GST.h + 30 + 40 }); } catch (e) { console.warn('fundo 3D indisponível', e); bg3d = null; }
   const sim = createSim(panel.spec);
   const R = panel.roles, BUS = panel.bus;
   const jackById = new Map(panel.jacks.map((j) => [j.id, j]));
@@ -158,17 +162,17 @@ export function createLessonScreen(opts = {}) {
   const VX = -40, VY = -40, VW = FW + 80, VH = GSTr.y + GSTr.h + 30 - VY;
   const stage = $('#lzStage'), wrap = $('#lzWrap');
   stage.style.width = VW + 'px'; stage.style.height = VH + 'px';
-  Object.assign(panel.canvas.style, { position: 'absolute', left: -VX + 'px', top: -VY + 'px', width: FW + 'px', height: FH + 'px' });
-  stage.appendChild(panel.canvas);
+  if (bg3d) { Object.assign(bg3d.canvas.style, { position: 'absolute', left: '0px', top: '0px', width: VW + 'px', height: VH + 'px' }); stage.appendChild(bg3d.canvas); }
+  else { Object.assign(panel.canvas.style, { position: 'absolute', left: -VX + 'px', top: -VY + 'px', width: FW + 'px', height: FH + 'px' }); stage.appendChild(panel.canvas); }
   // brilho do laminado que acompanha o ponteiro (reflexo da luz do teto), sem capturar cliques
   const sheen = document.createElement('div');
   Object.assign(sheen.style, { position: 'absolute', left: -VX + 'px', top: -VY + 'px', width: FW + 'px', height: FH + 'px', pointerEvents: 'none', mixBlendMode: 'soft-light', zIndex: 1,
     background: 'radial-gradient(520px 340px at 45% 18%, rgba(255,255,255,.55), rgba(255,255,255,0) 70%)', transition: 'background-position .2s' });
-  stage.appendChild(sheen);
+  if (!bg3d) stage.appendChild(sheen);
   wrap.addEventListener('pointermove', (e) => { const r = panel.canvas.getBoundingClientRect(); if (!r.width) return;
-    const px = ((e.clientX - r.left) / r.width) * 100, py = ((e.clientY - r.top) / r.height) * 100;
+    if (bg3d) return; const px = ((e.clientX - r.left) / r.width) * 100, py = ((e.clientY - r.top) / r.height) * 100;
     sheen.style.background = `radial-gradient(520px 340px at ${(100 - px * 0.6).toFixed(1)}% ${(8 + py * 0.25).toFixed(1)}%, rgba(255,255,255,.55), rgba(255,255,255,0) 70%)`; });
-  const svg = el('svg', { class: 'pnl', viewBox: `${VX} ${VY} ${VW} ${VH}`, width: VW, height: VH }, stage);
+  const svg = el('svg', { class: 'pnl' + (bg3d ? ' bg3d' : ''), viewBox: `${VX} ${VY} ${VW} ${VH}`, width: VW, height: VH }, stage);
   svg.style.width = VW + 'px'; svg.style.height = VH + 'px';
   const defs = el('defs', {}, svg);
   defs.innerHTML = `
@@ -197,13 +201,14 @@ export function createLessonScreen(opts = {}) {
   inner.innerHTML = `<defs><linearGradient id="gIT" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".28"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
     <linearGradient id="gIL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient></defs>
     <rect x="0" y="0" width="${FW}" height="16" fill="url(#gIT)"/><rect x="0" y="0" width="14" height="${FH}" fill="url(#gIL)"/>`;
+  if (bg3d) { bench.style.display = 'none'; frame.style.display = 'none'; inner.style.display = 'none'; }
   const gW = el('g', {}, svg), gJ = el('g', {}, svg), gC = el('g', {}, svg), gN = el('g', { 'pointer-events': 'none' }, svg), gP = el('g', {}, svg), gG = el('g', { 'pointer-events': 'none' }, svg);
   const SX = (x) => x, SY = (y) => y;
 
   // ---------- bornes ----------
   const jackEls = new Map();
   for (const j of panel.jacks) {
-    const g = el('g', { class: 'jk', 'data-j': j.id, transform: `translate(${j.x.toFixed(1)},${j.y.toFixed(1)})${j.scale && j.scale !== 1 ? ` scale(${j.scale})` : ''}` }, gJ);
+    const g = el('g', { class: 'jk' + (bg3d && j.on3d ? ' on3d' : ''), 'data-j': j.id, transform: `translate(${j.x.toFixed(1)},${j.y.toFixed(1)})${j.scale && j.scale !== 1 ? ` scale(${j.scale})` : ''}` }, gJ);
     // borne banana com profundidade: porca metálica, corpo isolante cônico, furo de 4 mm com sombra interna
     g.innerHTML = `<circle r="${j.scale < 1 ? 15 : 11.5}" fill="transparent"/><circle r="9.4" cx="1.6" cy="2.6" fill="rgba(0,0,0,.28)" filter="url(#fJs)"/>` +
       `<circle r="9" fill="url(#gNut)" stroke="#5e6164" stroke-width=".8"/><circle r="7.6" fill="none" stroke="rgba(255,255,255,.55)" stroke-width=".7" stroke-dasharray="2.6 1.4"/>` +
@@ -262,6 +267,14 @@ export function createLessonScreen(opts = {}) {
         <text x="${ew / 2}" y="18" text-anchor="middle" font-size="9.5" font-weight="800" fill="#f2c514" font-family="Arial">ACESSÓRIO EXTERNO</text><text x="${ew / 2}" y="30" text-anchor="middle" font-size="7" fill="#ddd" font-family="Arial">não faz parte do KET-1030</text>
         <circle cx="80" cy="88" r="40" fill="#f2c514"/><text x="80" y="140" text-anchor="middle" font-size="7.5" font-weight="800" fill="#f2c514" font-family="Arial">EMERGÊNCIA</text>
         <g transform="translate(80,88)"><circle r="20" fill="#333"/><g class="cap"><circle r="27" fill="#c81616" filter="url(#fSh)"/><ellipse cx="-8" cy="-10" rx="11" ry="6" fill="#fff" opacity=".3"/></g></g><text class="lt" x="150" y="136" font-size="8" font-weight="800" fill="#ff6b5a" font-family="Arial"></text>`;
+    } else if (w.type === 'motorMount' && bg3d && bg3d.fan) {
+      // disco estroboscópico de frente sobre o motor 3D (gira com o motor)
+      const F = bg3d.fan, R0 = F.r; g.setAttribute('transform', `translate(${F.x.toFixed(1)},${F.y.toFixed(1)})`);
+      const star = (n, r1, r2, off, fill) => `<polygon fill="${fill}" points="${Array.from({ length: n * 2 }, (_, i) => { const a = off + (i * Math.PI) / n, r = (i % 2 ? r2 : r1) * R0 / 256; return `${(Math.cos(a) * r).toFixed(2)},${(Math.sin(a) * r).toFixed(2)}`; }).join(' ')}"/>`;
+      g.innerHTML = `<circle r="${R0 * 1.02}" cx="1.2" cy="1.8" fill="rgba(0,0,0,.3)"/><g class="rot"><circle r="${R0}" fill="#efe4c4" stroke="#c9b98e" stroke-width="${R0 * 0.025}"/>
+        ${star(24, 226, 176, 0, '#111')}${star(24, 196, 150, Math.PI / 24, '#efe4c4')}${star(18, 150, 104, 0, '#111')}${star(18, 122, 82, Math.PI / 18, '#efe4c4')}${star(12, 84, 50, 0, '#111')}${star(12, 60, 34, Math.PI / 12, '#efe4c4')}
+        <circle r="${R0 * 0.065}" fill="#9a8f74"/></g><circle class="blur" r="${R0}" fill="#8a8370" opacity="0"/>
+        <text class="rpm" x="${R0 * 0.3}" y="${R0 + 11}" text-anchor="end" font-size="9" font-weight="800" fill="#1e2a3a" font-family="Arial">parado</text>`;
     } else if (w.type === 'motorMount') {
       const fins = Array.from({ length: 9 }, (_, i) => `<rect x="${-62 + i * 13}" y="-46" width="5" height="92" rx="2" fill="#4c5a68"/>`).join('');
       const sect = Array.from({ length: 6 }, (_, i) => `<path d="M0 0 L${(20 * Math.cos(i * Math.PI / 3)).toFixed(2)} ${(20 * Math.sin(i * Math.PI / 3)).toFixed(2)} A20 20 0 0 1 ${(20 * Math.cos((i + 0.5) * Math.PI / 3)).toFixed(2)} ${(20 * Math.sin((i + 0.5) * Math.PI / 3)).toFixed(2)} Z" fill="${i % 2 ? '#d9dde1' : '#e8b714'}"/>`).join('');
@@ -403,7 +416,7 @@ export function createLessonScreen(opts = {}) {
         const a = [706, y], d = `M${a[0]} ${a[1]} C${a[0] - 40} ${a[1] + 30} ${e[0] + 20} ${e[1] - 10} ${e[0]} ${e[1]}`;
         h += `<path d="${d}" fill="none" stroke="#1d7a33" stroke-width="7" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#f0c419" stroke-width="7" stroke-dasharray="10 10"/><rect x="${a[0] - 7}" y="${a[1] - 9}" width="14" height="18" rx="3" fill="#888" stroke="#333"/>`;
       });
-      h += `<circle cx="${e[0]}" cy="${e[1]}" r="9" fill="#777" stroke="#333"/><text x="${e[0] - 12}" y="${e[1] + 22}" text-anchor="end" font-size="10" font-weight="700" fill="#1d5b2a" font-family="Arial">aterramento temporário → terra da estrutura</text>`;
+      h += `<circle cx="${e[0]}" cy="${e[1]}" r="9" fill="#777" stroke="#333"/><g transform="translate(${e[0] - 14},${e[1] - 16})"><rect x="-118" y="-9" width="122" height="14" rx="3" fill="rgba(255,255,255,.92)" stroke="#1d5b2a" stroke-width=".6"/><text x="0" y="1.5" text-anchor="end" font-size="8.5" font-weight="700" fill="#1d5b2a" font-family="Arial">aterramento temporário → terra da estrutura</text></g>`;
     }
     if (n.sign) h += `<g transform="translate(1250,880) rotate(-2)"><rect x="-120" y="-34" width="240" height="68" rx="5" fill="#fff" stroke="#c62828" stroke-width="5"/><rect x="-120" y="-34" width="240" height="22" fill="#c62828"/><text y="-18" text-anchor="middle" font-size="13" font-weight="800" fill="#fff" font-family="Arial">PERIGO</text><text y="6" text-anchor="middle" font-size="12.5" font-weight="800" fill="#1e2a3a" font-family="Arial">EM MANUTENÇÃO</text><text y="24" text-anchor="middle" font-size="12.5" font-weight="800" fill="#c62828" font-family="Arial">NÃO ENERGIZE</text></g>`;
     gN.innerHTML = h;
@@ -969,11 +982,11 @@ export function createLessonScreen(opts = {}) {
   function spinFan(dt) {
     const wm = W.find((w) => w.type === 'motorMount'); if (!wm) return;
     const rpm = sim.dev(R.M).st.rpm || 0;
-    const target = Math.sign(rpm) * Math.min(Math.abs(rpm) / 1736, 1) * 1.6 * 360; // até 1,6 volta/s no desenho
+    const target = Math.sign(rpm) * Math.min(Math.abs(rpm) / 1736, 1) * 0.9 * 360; // até 0,9 volta/s (sem efeito estroboscópico no padrão de 24 dentes)
     fanV += (target - fanV) * Math.min(1, dt * 3);                                 // acelera e desacelera suave
     fanA = (fanA + fanV * dt) % 360;
     wm.g.querySelector('.rot').setAttribute('transform', `rotate(${fanA.toFixed(1)})`);
-    wm.g.querySelector('.blur').setAttribute('opacity', (Math.min(1, Math.abs(fanV) / 576) * 0.3).toFixed(2));
+    wm.g.querySelector('.blur').setAttribute('opacity', (Math.min(1, Math.abs(fanV) / 576) * (bg3d ? 0.12 : 0.3)).toFixed(2));
   }
   function update(dt) {
     if (!root.classList.contains('on')) return;
