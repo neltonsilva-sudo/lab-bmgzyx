@@ -1,9 +1,9 @@
 // DONO: agente "aula-pratica". Segunda tela (tela cheia) com o painel KET-1030 funcional: cabos de teste, botoeiras,
 // medidores, multímetro, procedimento NR-10, roteiros com verificação automática, defeitos e relatório.
-import { createSim, fmtA } from './lesson_sim.js?v=20261009142652';
-import { getPanel, JACK_COL } from './lesson_panels.js?v=20261009142652';
-import { build3DBackground } from './lesson_bg3d.js?v=20261009142652';
-import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261009142652';
+import { createSim, fmtA } from './lesson_sim.js?v=20261014214920';
+import { getPanel, JACK_COL } from './lesson_panels.js?v=20261014214920';
+import { build3DBackground } from './lesson_bg3d.js?v=20261014214920';
+import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261014214920';
 
 const CABLE = { R: ['#d11f1f', '#7a0d0d', 'vermelho'], K: ['#202020', '#000', 'preto'], B: ['#1f56c9', '#0d2a6e', 'azul'], Y: ['#f0c419', '#8a6d05', 'amarelo'], W: ['#f2f2ee', '#8d8d86', 'branco'], G: ['#1f9a3c', '#0b4a1a', 'verde'] };
 const NS = 'http://www.w3.org/2000/svg';
@@ -499,10 +499,10 @@ export function createLessonScreen(opts = {}) {
   }
   // Pino banana 4 mm de segurança (IEC 61010-031 / ABNT NBR IEC 61010-031): luva isolante rígida que cobre o pino,
   // traseira empilhável (soquete de 4 mm), alívio de tração no cabo e marcação de categoria CAT III 1000 V / 32 A.
-  function safetyPlug(p, u, c, dk) {
+  function safetyPlug(p, u, c, dk, jid) {
     const [x, y] = p;
     const ang = (Math.atan2(u[1], u[0]) * 180) / Math.PI; // alinhado com a saída do cabo
-    return `<g class="plug">
+    return `<g class="plug" data-j="${jid || ''}" style="cursor:crosshair">
       <g transform="translate(${x},${y}) rotate(${ang.toFixed(1)})">
         <rect x="4" y="-3.6" width="17" height="7.2" rx="3.2" fill="${dk}"/>
         <rect x="5" y="-2.7" width="15" height="5.4" rx="2.6" fill="${c}"/>
@@ -535,7 +535,7 @@ export function createLessonScreen(opts = {}) {
       const g = el('g', { class: 'cb', 'data-w': w.id, opacity: op }, gC);
       g.innerHTML = `<path d="${d}" fill="none" stroke="transparent" stroke-width="14"/><path class="cbo" d="${d}" fill="none" stroke="${dk}" stroke-width="6.4" stroke-linecap="round"/>
         <path d="${d}" fill="none" stroke="${c}" stroke-width="4.6" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="1.2" transform="translate(-1,-1)"/>` +
-        [[pa, ua], [pb, ub]].map(([p, u]) => safetyPlug(p, u, c, dk)).join('');
+        [[pa, ua, w.ja], [pb, ub, w.jb]].map(([p, u, jid]) => safetyPlug(p, u, c, dk, jid)).join('');
     }
   }
   const jackOfTerm = (t) => (jacksByTerm.get(t) || [])[0];
@@ -865,7 +865,7 @@ export function createLessonScreen(opts = {}) {
   const tipShow = (e, html) => { tip.innerHTML = html; tip.style.display = 'block'; tip.style.left = Math.min(innerWidth - 340, e.clientX + 14) + 'px'; tip.style.top = (e.clientY + 16) + 'px'; };
   const tipHide = () => (tip.style.display = 'none');
   const toSvg = (e) => { const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); };
-  const jackAt = (e) => { const t = document.elementFromPoint(e.clientX, e.clientY); const g = t && t.closest && t.closest('.jk'); return g ? jackById.get(g.dataset.j) : null; };
+  const jackAt = (e) => { const t = document.elementFromPoint(e.clientX, e.clientY); const p = t && t.closest && t.closest('.plug[data-j]'); if (p && p.dataset.j) return jackById.get(p.dataset.j); const g = t && t.closest && t.closest('.jk'); return g ? jackById.get(g.dataset.j) : null; };
   let drag = null, panDrag = null, netHl = [];
   function highlightNet(j) {
     netHl.forEach((g) => g.classList.remove('net')); netHl = [];
@@ -900,7 +900,9 @@ export function createLessonScreen(opts = {}) {
 
   wrap.addEventListener('pointerdown', (e) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
-    const t = e.target, jg = t.closest && t.closest('.jk'), cg = t.closest && t.closest('.cb'), wg = t.closest && t.closest('.wd');
+    const t = e.target, pg = t.closest && t.closest('.plug[data-j]'), jg = t.closest && t.closest('.jk'), cg = t.closest && t.closest('.cb'), wg = t.closest && t.closest('.wd');
+    // clicar/arrastar na cabeça de um plugue = usar o borne dele (empilhar outro cabo por cima, plugue traseiro de 4 mm)
+    if (pg && pg.dataset.j && X.mode !== 'meter') { const j = jackById.get(pg.dataset.j); if (j) { drag = { j, x: e.clientX, y: e.clientY, moved: false, id: e.pointerId }; wrap.setPointerCapture(e.pointerId); e.preventDefault(); return; } }
     if (jg) {
       const j = jackById.get(jg.dataset.j);
       if (X.mode === 'meter') { placeProbe(j); return; }
