@@ -1,12 +1,21 @@
 // DONO: agente "aula-pratica". Segunda tela (tela cheia) com o painel KET-1030 funcional: cabos de teste, botoeiras,
 // medidores, multímetro, procedimento NR-10, roteiros com verificação automática, defeitos e relatório.
-import { createSim, fmtA, GST_SYSTEMS } from './lesson_sim.js?v=20261014221936';
-import { getPanel, JACK_COL } from './lesson_panels.js?v=20261014221936';
-import { build3DBackground } from './lesson_bg3d.js?v=20261014221936';
-import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261014221936';
+import { createSim, fmtA, GST_SYSTEMS } from './lesson_sim.js?v=20261015144053';
+import { getPanel, JACK_COL } from './lesson_panels.js?v=20261015144053';
+import { build3DBackground } from './lesson_bg3d.js?v=20261015144053';
+import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261015144053';
 
 const CABLE = { R: ['#d11f1f', '#7a0d0d', 'vermelho'], K: ['#202020', '#000', 'preto'], B: ['#1f56c9', '#0d2a6e', 'azul'], Y: ['#f0c419', '#8a6d05', 'amarelo'], W: ['#f2f2ee', '#8d8d86', 'branco'], G: ['#1f9a3c', '#0b4a1a', 'verde'] };
 const NS = 'http://www.w3.org/2000/svg';
+// os widgets são atualizados a cada quadro: só toca no SVG quando o valor muda (regravar o mesmo valor força o navegador
+// a redesenhar os filtros de sombra/brilho e, no Safari/celular, faz o painel tremer)
+if (!SVGElement.prototype.__saIdem) {
+  const sa = SVGElement.prototype.setAttribute;
+  SVGElement.prototype.setAttribute = function (k, v) { if (this.getAttribute(k) !== String(v)) sa.call(this, k, v); };
+  const tc = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent');
+  Object.defineProperty(SVGElement.prototype, 'textContent', { configurable: true, get() { return tc.get.call(this); }, set(v) { if (tc.get.call(this) !== String(v ?? '')) tc.set.call(this, v); } });
+  SVGElement.prototype.__saIdem = true;
+}
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const mmss = (t) => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 const num = (v, d = 1) => v.toFixed(d).replace('.', ',');

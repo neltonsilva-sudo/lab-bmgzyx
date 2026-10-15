@@ -203,7 +203,7 @@ export function decalGeo(R, items, sx = 1, sy = 1) {
   const gs = items.map(([n, x, y, z]) => {
     const r = R[n], g = new THREE.PlaneGeometry(r.w, r.h), uv = g.attributes.uv, [u0, v0, u1, v1] = r.uv;
     for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + uv.getX(i) * (u1 - u0), v0 + uv.getY(i) * (v1 - v0));
-    g.translate(x, y, z); return g;
+    g.translate(x, y, z + 0.0003); return g; // +0,3 mm: evita disputa de profundidade com a superfície (cintilação)
   });
   const m = mergeGeometries(gs); if (sx !== 1 || sy !== 1) m.scale(1 / sx, 1 / sy, 1); m.computeBoundingSphere(); return m;
 }

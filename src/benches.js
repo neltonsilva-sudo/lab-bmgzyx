@@ -2,10 +2,10 @@
 // chapa perfurada, prateleira inclinada, estrutura tubular, cabos de teste pendurados, cabos descendo do teto).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { BENCH_ROW, BENCHES, ROOM } from './layout.js?v=20261014221936';
-import * as TX from './benches_tex.js?v=20261014221936';
-import * as PG from './benches_parts.js?v=20261014221936';
-import { LAYOUTS, TITLES } from './benches_layouts.js?v=20261014221936';
+import { BENCH_ROW, BENCHES, ROOM } from './layout.js?v=20261015144053';
+import * as TX from './benches_tex.js?v=20261015144053';
+import * as PG from './benches_parts.js?v=20261015144053';
+import { LAYOUTS, TITLES } from './benches_layouts.js?v=20261015144053';
 
 const LW = 1.73, LH = 0.93;            // face nominal do layout (m)
 const JC = { K: 0x161616, R: 0xc41c1c, W: 0xe4e4dc, B: 0x1c4fc8, Y: 0xe8bf12, G: 0x1f9a3c };
@@ -55,7 +55,7 @@ export function buildBenches(scene, ctx) {
   const mJack = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.34, metalness: 0.0, clearcoat: 0.6, clearcoatRoughness: 0.25 });
   // impressões dos componentes da b1 (atlas único 2048²; planos transparentes colados nas faces das peças)
   const ATL = TX.b1Atlas(renderer);
-  const mDecal = new THREE.MeshStandardMaterial({ map: ATL.tex, transparent: true, depthWrite: false, roughness: 0.48, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
+  const mDecal = new THREE.MeshStandardMaterial({ map: ATL.tex, transparent: true, depthWrite: false, roughness: 0.48, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -8 });
   // sombra projetada dos módulos sobre o trilho DIN (plano translúcido com bordas suaves)
   const mRailShadow = (() => { const c = document.createElement('canvas'); c.width = 64; c.height = 16; const gg = c.getContext('2d');
     const gr = gg.createLinearGradient(0, 0, 64, 0); gr.addColorStop(0, 'rgba(0,0,0,0.75)'); gr.addColorStop(0.55, 'rgba(0,0,0,0.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)');

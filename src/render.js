@@ -10,11 +10,11 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { UpscaleShader } from './render_upscale.js?v=20261014221936';
+import { UpscaleShader } from './render_upscale.js?v=20261015144053';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
-import { installBoxProjection, buildEnvironment } from './render_env.js?v=20261014221936';
-import { PhoneShader } from './render_post.js?v=20261014221936';
-import { findFixtures, buildFixtureMeshes } from './render_fixtures.js?v=20261014221936';
+import { installBoxProjection, buildEnvironment } from './render_env.js?v=20261015144053';
+import { PhoneShader } from './render_post.js?v=20261015144053';
+import { findFixtures, buildFixtureMeshes } from './render_fixtures.js?v=20261015144053';
 
 const QS = new URLSearchParams(location.search);
 const QUALITY = QS.get('q') || 'high';
