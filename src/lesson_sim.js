@@ -5,6 +5,12 @@
 // Uso: const s = createSim(spec); s.addWire('PWR.L1','Q1.1'); s.setMain(true); s.step(0.05); s.dev('K1').st.on ...
 
 const VF = 220, VL = 380;
+// sistemas do GST (como no painel do aparelho): tensão entre fases e se há neutro
+export const GST_SYSTEMS = [
+  { k: '1', t: '3N~110Vca', VLL: 110, N: true }, { k: '2', t: '3N~220Vca', VLL: 220, N: true }, { k: '3', t: '3N~380Vca', VLL: 380, N: true },
+  { k: '4', t: '3N~440Vca', VLL: 440, N: true }, { k: '5', t: '3N~480Vca', VLL: 480, N: true }, { k: '6', t: '3x220Vca', VLL: 220, N: false },
+];
+export const gstPhaseV = (sys) => (sys.VLL === 380 ? VF : sys.VLL / Math.sqrt(3));
 const deg = Math.PI / 180;
 const P = (m, a) => [m * Math.cos(a * deg), m * Math.sin(a * deg)];
 export const PHASORS = { L1: P(VF, 0), L2: P(VF, -120), L3: P(VF, 120), N: [0, 0], PE: [0, 0] };
@@ -83,7 +89,9 @@ export const TYPES = {
       const st = d.st, wr = Math.max(0, st.w * (st.dir || 1)), lf = st.load;
       // por enrolamento (380 V, 0,606 A nominal): magnetização + rotor (rotor bloqueado ≈ 6 × In)
       const Yn = 1 / 627, slip = 1 - Math.min(1, wr / Math.max(0.05, st.fr || 1));
-      const ymag = P(Yn * 0.45, -78), yrun = P(Yn * Math.max(0.05, lf) * 0.8, -12), ylr = P(Yn * 6, -62);
+      // saturação: corrente de magnetização cresce muito acima do fluxo nominal (V/f > 380 V/60 Hz)
+      const fx = st.flux > 1 ? Math.pow(st.flux, 4) : 1;
+      const ymag = P(Yn * 0.45 * fx, -78), yrun = P(Yn * Math.max(0.05, lf) * 0.8, -12), ylr = P(Yn * 6, -62);
       const k = Math.pow(Math.max(0, Math.min(1, (slip - 0.05) / 0.95)), 1.5); // 0 em rotação plena, 1 parado
       const y = cAdd(ymag, cAdd(cMul(yrun, [1 - k, 0]), cMul(ylr, [k, 0])));
       return [['1', '4'], ['2', '5'], ['3', '6']].filter((_, i) => d.st.openW !== i).map(([a, b], i) => ({ a, b, y, k: 'w' + i }));
@@ -94,6 +102,9 @@ export const TYPES = {
       const net = v1 * v1 - v2 * v2, fr = s.freqOf ? s.freqOf(d) : 1;
       st.v1 = v1; st.v2 = v2; st.fr = fr;
       st.Vw = [cAbs(va), cAbs(vb), cAbs(vc)];
+      // fluxo relativo (V/f): 1 = nominal 380 V / 60 Hz por enrolamento
+      st.flux = Math.max(...st.Vw) / VL / Math.max(fr, 0.05);
+      motorWatch(d, s, dt, v1, fr);
       st.hum = (v1 > 0.15 || v2 > 0.15) && Math.abs(net) < 0.25;
       let target = 0, rate = 1.2;
       if (Math.abs(net) >= 0.25 && fr > 0.02) {
@@ -205,6 +216,23 @@ export const TYPES = {
     } },
 };
 
+// avisos didáticos do motor: sobreexcitação (tensão alta ou frequência baixa), subtensão e aquecimento do enrolamento
+function motorWatch(d, s, dt, v1, fr) {
+  const st = d.st, Vmax = Math.max(...st.Vw), VLL = Math.round(Vmax);
+  if (Vmax < 20) { st.ovT = 0; st.uvT = 0; st.ovWarn = false; st.uvWarn = false; }
+  if (st.flux > 1.08 && v1 > 0.3) { st.ovT = (st.ovT || 0) + dt; if (st.ovT > 0.5 && !st.ovWarn) { st.ovWarn = true;
+    s.event('warn', fr < 0.95 ? `${d.name}: alimentado em ${Math.round(fr * 60)} Hz com ${VLL} V por enrolamento (nominal 380 V/60 Hz) — sobreexcitação: corrente de magnetização alta e aquecimento.`
+      : `${d.name}: ${VLL} V por enrolamento (nominal 380 V em Δ) — SOBRETENSÃO: o núcleo satura, a corrente sobe e o motor aquece. Proteja com relé térmico/RCA e selecione o sistema correto.`, d.id); } }
+  else st.ovT = 0;
+  if (v1 > 0.15 && v1 < 0.8 && fr > 0.5 && Math.max(...st.Vw) > 20) { st.uvT = (st.uvT || 0) + dt; if (st.uvT > 1 && !st.uvWarn) { st.uvWarn = true;
+    s.event('warn', `${d.name}: SUBTENSÃO (${VLL} V por enrolamento, nominal 380 V) — o conjugado cai com o quadrado da tensão: ${st.hum ? 'o motor não parte (zumbido, rotor bloqueado)' : 'partida fraca e escorregamento alto'}.`, d.id); } }
+  else st.uvT = 0;
+  const Iw = Math.max(0, ...(st.Iw || [0])), k = Iw / 0.606;
+  st.Hm = (st.Hm || 0) + (k * k - (st.Hm || 0)) * dt / 60;
+  if (st.Hm > 1.45 && !st.hotWarn) { st.hotWarn = true; s.event('warn', `${d.name} SOBREAQUECENDO: corrente de ${fmtA(Iw)} por enrolamento (nominal 0,61 A) por tempo prolongado — desligue e verifique a alimentação/carga.`, d.id); }
+  if (st.Hm < 1.1) st.hotWarn = false;
+}
+
 function thermalStep(d, I, dt, s, why) {
   const Ir = d.st.Ir || d.p.Ir || 1.1, k = I / Ir;
   d.st.H += (k * k - d.st.H) * dt / 40;           // constante térmica acelerada (didática)
@@ -259,7 +287,7 @@ export function createSim(spec) {
   }
   const staticLinks = (spec.links || []).slice();
   const s = {
-    gst: { on: false, V: 220, seq: 1, loss: null, fault: false }, tripBy: null,
+    gst: { pw: false, on: false, V: 220, seq: 1, loss: null, fault: false, sys: 2, f: 60, noN: false }, tripBy: null,
     spec, devs, wires: [], mainOn: false, mainTrip: false, grounding: false, faults: {}, events: [], time: 0,
     V: new Map(), group: null, elemCur: new Map(), dirty: true, lastShort: null, osc: false, wireSeq: 1,
   };
@@ -290,14 +318,18 @@ export function createSim(spec) {
     if (G && G.on && !G.fault) {
       const sg = G.seq < 0 ? -1 : 1;
       for (const [k, ang] of [['R', 0], ['S', -120 * sg], ['T', 120 * sg]]) if (G.loss !== k) src.set('GST.' + k, { v: P(G.V, ang), id: 'GST-' + k, gst: true });
-      src.set('GST.N', { v: [0, 0], id: 'N', gst: true });
+      if (!G.noN) src.set('GST.N', { v: [0, 0], id: 'N', gst: true });
     }
     return src;
   }
   s.freqOf = (d) => {
     for (const inv of devs.values()) if (inv.type === 'inverter') for (const k of ['1', '2', '3', '4', '5', '6']) for (const o of ['U', 'V', 'W']) if (s.same(t(d, k), t(inv, o))) return Math.abs(inv.st.f) / 60;
+    const G = s.gst;
+    if (G && G.on && !G.fault) for (const k of ['1', '2', '3', '4', '5', '6']) for (const o of ['R', 'S', 'T']) if (s.same(t(d, k), 'GST.' + o)) return (G.f || 60) / 60;
     return 1;
   };
+  // seleciona o sistema do GST (índice em GST_SYSTEMS)
+  s.gstSystem = (i) => { const sy = GST_SYSTEMS[i]; if (!sy) return; Object.assign(s.gst, { sys: i, V: gstPhaseV(sy), noN: !sy.N }); s.dirty = true; };
   // fechamento do motor: estrela (Y), triângulo (Δ) ou indefinido
   s.motorConn = (d) => {
     const g = (k) => s.group.find(t(d, k));
@@ -425,7 +457,7 @@ export function createSim(spec) {
   s.testTrip = (id) => { const d = devs.get(id); d.st.trip = true; d.st.H = Math.max(d.st.H || 0, 1.0); s.event('info', `${d.name}: botão TESTE acionado — contato 95-96 abriu.`, id); s.dirty = true; };
 
   // ---- multímetro ----
-  s.measureV = (a, b) => { if (!s.group) s.settle(); return cAbs(cSub(s.vt(a), s.vt(b))); };
+  s.measureV = (a, b) => { if (!s.group) s.settle(); if (!s.V.has(s.group.find(a)) || !s.V.has(s.group.find(b))) return 0; return cAbs(cSub(s.vt(a), s.vt(b))); }; // ponta em borne isolado (aberto): ≈ 0 V
   // resistência DC entre dois bornes (com a bancada desenergizada); devolve Infinity se aberto
   s.measureR = (a, b) => {
     const uf = UF(), R = [];

@@ -1,9 +1,9 @@
 // DONO: agente "aula-pratica". Segunda tela (tela cheia) com o painel KET-1030 funcional: cabos de teste, botoeiras,
 // medidores, multímetro, procedimento NR-10, roteiros com verificação automática, defeitos e relatório.
-import { createSim, fmtA } from './lesson_sim.js?v=20261014214920';
-import { getPanel, JACK_COL } from './lesson_panels.js?v=20261014214920';
-import { build3DBackground } from './lesson_bg3d.js?v=20261014214920';
-import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261014214920';
+import { createSim, fmtA, GST_SYSTEMS } from './lesson_sim.js?v=20261014221936';
+import { getPanel, JACK_COL } from './lesson_panels.js?v=20261014221936';
+import { build3DBackground } from './lesson_bg3d.js?v=20261014221936';
+import { SCRIPTS, scriptById, makeCtx, FAULTS, clearFault } from './lesson_scripts.js?v=20261014221936';
 
 const CABLE = { R: ['#d11f1f', '#7a0d0d', 'vermelho'], K: ['#202020', '#000', 'preto'], B: ['#1f56c9', '#0d2a6e', 'azul'], Y: ['#f0c419', '#8a6d05', 'amarelo'], W: ['#f2f2ee', '#8d8d86', 'branco'], G: ['#1f9a3c', '#0b4a1a', 'verde'] };
 const NS = 'http://www.w3.org/2000/svg';
@@ -273,6 +273,50 @@ export function createLessonScreen(opts = {}) {
     <path d="M${x - hw + 0.6} ${y1 - 0.3} H${x + hw - 0.4} V${y0 + 1}" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width=".8"/><path d="M${x - hw + 0.3} ${y1 - 1} V${y0 + 0.3} H${x + hw - 1}" fill="none" stroke="#000" stroke-opacity=".8" stroke-width=".9"/>`;
   // indicador de posição dos contatos (verde = aberto, vermelho = fechado) sobre o indicador do 3D
   const flag = (x, y, w, h) => `<rect class="fl" x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="1.4" fill="#1f9a4a"/><rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="1.4" fill="url(#wSpec)" opacity=".6"/><rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="1.4" fill="none" stroke="#000" stroke-opacity=".45" stroke-width=".5"/>`;
+  // ---- frente do GST (ALTRONIC/TRON), fiel à foto refs/det/d4323: voltímetros R/S/T, LEDs de estado, sistemas, frequência, LCD e teclado 4×4 ----
+  const GST_KEYS = [[['7', '-R-'], ['8', '-S-'], ['9', '-T-'], ['2F', '']], [['4', '440Vca'], ['5', '480Vca'], ['6', '3x220Vca'], ['3F', '3 fases']],
+    [['1', '110Vca'], ['2', '220Vca'], ['3', '380Vca'], ['+', '60 Hz']], [['%', 'SAÍDAS'], ['0', 'STAND BY'], ['∅', 'SEQ.'], ['−', '50 Hz']]];
+  function gstFront(gw, gh) {
+    const BL = '#2b62bf', F = 'font-family="Arial, Helvetica, sans-serif"';
+    const led = (cx, cy, cls, c) => `<g class="${cls}" data-c="${c}"><circle class="lh" cx="${cx}" cy="${cy}" r="5.5" fill="${c}" opacity="0" filter="url(#wBl)"/><circle class="ld" cx="${cx}" cy="${cy}" r="2.7" fill="#3b3434" stroke="#111" stroke-width=".6"/><circle cx="${cx - 0.8}" cy="${cy - 0.9}" r=".8" fill="#fff" opacity=".45"/></g>`;
+    const box = (x, y, w, h, t, fs = 5.6, al = 'start') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${BL}"/><text x="${al === 'middle' ? x + w / 2 : x + 3}" y="${y + h / 2 + fs * 0.36}" text-anchor="${al}" font-size="${fs}" font-weight="700" fill="#fff" ${F}>${t}</text>`;
+    let h = `<rect width="${gw}" height="${gh}" rx="6" fill="#ecebe2" stroke="#b6b2a0" stroke-width="2" filter="url(#fSh)"/>
+      <clipPath id="gstClip"><rect x="5" y="5" width="${gw - 10}" height="${gh - 10}"/></clipPath>
+      <g clip-path="url(#gstClip)"><circle cx="176" cy="150" r="118" fill="${BL}"/><path d="M5 92 L74 ${gh} L5 ${gh} Z" fill="${BL}"/></g>
+      <rect x="5" y="5" width="${gw - 10}" height="${gh - 10}" fill="none" stroke="#1d1f22" stroke-width="1.4"/>`;
+    // voltímetros
+    ['R', 'S', 'T'].forEach((p, i) => { const x0 = 18 + i * 94;
+      h += `<rect x="${x0}" y="12" width="84" height="46" rx="4" fill="#15181c"/><rect x="${x0 + 7}" y="17" width="70" height="23" rx="1" fill="#9fae92"/><rect x="${x0 + 7}" y="17" width="70" height="7" fill="#fff" opacity=".12"/>
+        <text class="gv${p}" x="${x0 + 73}" y="34.5" text-anchor="end" font-family="Consolas,monospace" font-size="15" font-weight="700" fill="#1d2618">0</text>
+        <text x="${x0 + 8}" y="53" font-size="10" font-weight="800" fill="#fff" ${F}>${p}</text><text x="${x0 + 77}" y="53" text-anchor="end" font-size="7" font-weight="700" fill="#fff" ${F}>Volts</text>`; });
+    // saídas (os bornes ficam por cima: R/S/T em y 128, neutros em y 165)
+    [60, 150, 240].forEach((x, i) => { h += `<rect x="${x + 11}" y="121" width="50" height="14" fill="${BL}" stroke="#fff" stroke-width=".8"/><text x="${x + 15}" y="130.5" font-size="7" font-weight="700" fill="#fff" ${F}>Fase ${'RST'[i]}</text>
+      <rect x="${x + 11}" y="158" width="50" height="14" fill="${BL}" stroke="#fff" stroke-width=".8"/><text x="${x + 15}" y="167.5" font-size="7" font-weight="700" fill="#fff" ${F}>Neutro</text>`; });
+    h += `<text x="24" y="182" font-size="11" font-weight="800" fill="#fff" ${F} transform="rotate(-90 24 182)">SAÍDAS</text>
+      <path d="M33 101 L41 115 L25 115 Z" fill="#f2c514" stroke="#111" stroke-width=".7"/><text x="33" y="113.5" text-anchor="middle" font-size="7" font-weight="900" fill="#111" ${F}>!</text>
+      <text x="44" y="108" font-size="4.6" font-weight="800" fill="#1e2a3a" ${F}>ALTA</text><text x="44" y="114" font-size="4.6" font-weight="800" fill="#1e2a3a" ${F}>TENSÃO</text>
+      <text x="40" y="190" font-size="4.6" fill="#fff" ${F}>Potência máx.: 30 W por fase · corrente máx.: 85 mAca</text>`;
+    // título
+    h += `<text x="302" y="16" font-size="8.6" font-weight="800" fill="#1e2a3a" ${F}>Gerador de Sistemas Trifásicos</text><text x="515" y="17" text-anchor="end" font-size="13" font-weight="900" fill="#1e2a3a" ${F}>GST</text>`;
+    // LEDs de estado, sistema selecionado, frequência
+    h += led(306, 27, 'gL gLen', '#ff3b28') + box(313, 21, 84, 12, 'SAÍDAS ENERGIZADAS', 5.4) + `<path d="M399.5 24 l3 5 h-6 z" fill="#111"/>`;
+    h += led(306, 40, 'gL gLsb', '#ffb020') + box(313, 34.5, 84, 11, 'STAND BY');
+    h += led(306, 53, 'gL gLon', '#3dff6a') + box(313, 47.5, 84, 11, 'LIGADO');
+    h += box(313, 61, 84, 13, 'SISTEMA SELECIONADO', 5.4, 'middle');
+    GST_SYSTEMS.forEach((sy, i) => { const cy = 81 + i * 9.4; h += led(306, cy, 'gL gLs' + i, '#3dff6a') + box(313, cy - 4, 84, 8, sy.t.replace('~', ' ~ ').replace('x', ' x '), 5.2); });
+    h += box(313, 138, 84, 11, 'FREQUÊNCIA', 5.6, 'middle');
+    [['Ajustável', 'gLfa'], ['50 Hz', 'gLf50'], ['60 Hz', 'gLf60']].forEach(([t, c], i) => { const cy = 155 + i * 9.4; h += led(306, cy, 'gL ' + c, '#3dff6a') + box(313, cy - 4, 50, 8, t, 5.2); });
+    h += `<text x="302" y="194" font-size="8" font-weight="900" font-style="italic" fill="#1e2a3a" ${F}>ALTRONIC</text><text x="398" y="194" text-anchor="end" font-size="8" font-weight="900" fill="#1e2a3a" ${F}>TRON</text>`;
+    // LCD alfanumérico R S T e teclado de membrana 4×4 (teclas clicáveis)
+    h += `<rect x="405" y="23" width="110" height="42" rx="4" fill="#15181c"/><rect x="411" y="27" width="98" height="22" rx="1" fill="#8fb27e"/><rect class="glb" x="411" y="27" width="98" height="22" rx="1" fill="#c9f2a8" opacity="0"/>
+      <text class="gl1" x="414" y="36" font-family="Consolas,monospace" font-size="6.6" font-weight="700" fill="#14210f"></text><text class="gl2" x="414" y="45.5" font-family="Consolas,monospace" font-size="6.6" font-weight="700" fill="#14210f"></text>
+      <text x="460" y="61" text-anchor="middle" font-size="10" font-weight="800" fill="#fff" ${F} letter-spacing="9">RST</text>
+      <rect x="405" y="69" width="110" height="129" rx="3" fill="#2a2d31"/>`;
+    GST_KEYS.forEach((row, r) => row.forEach(([k, sub], c) => { const x = 408.5 + c * 26.6, y = 72 + r * 31.5;
+      h += `<g class="gk" data-k="${k}" style="cursor:pointer"><g class="gkc"><rect x="${x}" y="${y}" width="23" height="27" rx="2.2" fill="#e3e5e1" stroke="#80868c" stroke-width=".7"/><rect x="${x + 1.5}" y="${y + 1.5}" width="20" height="10" rx="1" fill="#fff" opacity=".5"/>
+        <text x="${x + 11.5}" y="${y + 12}" text-anchor="middle" font-size="9" font-weight="800" fill="#1e2a3a" ${F}>${k}</text>${sub ? `<text x="${x + 11.5}" y="${y + 22.5}" text-anchor="middle" font-size="4.3" font-weight="700" fill="#b0281c" ${F}>${sub}</text>` : ''}</g></g>`; }));
+    return h;
+  }
   for (const w of panel.widgets) {
     const g = el('g', { class: 'wd', transform: `translate(${w.x},${w.y})` }, gW); w.g = g; W.push(w);
     if (w.tip) g.dataset.tip = w.tip;
@@ -307,7 +351,12 @@ export function createLessonScreen(opts = {}) {
     } else if (w.type === 'relay') {
       g.innerHTML = `<rect x="-18" y="-62" width="36" height="124" fill="transparent"/><circle class="lh" cx="-9" cy="-8" r="6" fill="#3dff6a" opacity="0" filter="url(#wBl)"/><circle class="led" cx="-9" cy="-8" r="2.4" fill="#2a3a2c" stroke="rgba(0,0,0,.5)" stroke-width=".5"/><circle cx="-9.7" cy="-8.8" r=".8" fill="#fff" opacity=".6"/><text class="tm" x="0" y="76" text-anchor="middle" font-size="8" font-weight="700" fill="#1f6fd1" font-family="Arial"></text>`;
     } else if (w.type === 'ctd') {
-      g.innerHTML = `<rect x="-50" y="-40" width="100" height="90" fill="transparent"/><text class="v" x="0" y="-2" text-anchor="middle" font-family="Consolas,monospace" font-weight="700" font-size="20" fill="#ff4b3a" style="filter:drop-shadow(0 0 2px #ff3b28)">0.0</text><text class="sv" x="0" y="12" text-anchor="middle" font-family="Consolas,monospace" font-weight="700" font-size="9" fill="#5ef06a" style="filter:drop-shadow(0 0 1.5px #3dff6a)">SP 5.0s</text>`;
+      // display do CTD sobre o LCD do 3D: só aparece com o controlador alimentado (6-7)
+      g.innerHTML = `<rect x="-50" y="-40" width="100" height="90" fill="transparent"/><g class="disp" opacity="0"><rect x="-38" y="-20" width="76" height="40" rx="1.5" fill="#060708"/>
+        <text class="sv" x="-34" y="-11" font-family="Consolas,monospace" font-weight="700" font-size="6.5" fill="#5ef06a" style="filter:drop-shadow(0 0 1.2px #3dff6a)">SP 5.0s</text>
+        <text class="md" x="34" y="-11" text-anchor="end" font-family="Consolas,monospace" font-weight="700" font-size="6" fill="#ffb020"></text>
+        <text class="v" x="34" y="8" text-anchor="end" font-family="Consolas,monospace" font-weight="700" font-size="18" fill="#ff4b3a" style="filter:drop-shadow(0 0 2px #ff3b28)">0.0</text>
+        ${['o1', 'o2', 'ct', 'tm'].map((k, i) => `<circle class="cl ${k}" cx="${-25 + i * 16.5}" cy="15.5" r="1.9" fill="#3a1d1a"/>`).join('')}</g>`;
     } else if (w.type === 'mainBreaker') {
       // alavancas sobre os recortes do modelo 3D (polos a -11,5 / 19,75 / 51 un; recorte y -22,1..8,6), com barra de acoplamento
       const XS = [-11.5, 19.75, 51], cx = 19.75, HW = 5.7;
@@ -315,7 +364,7 @@ export function createLessonScreen(opts = {}) {
       const tie = (y) => `<rect x="${XS[0] - HW}" y="${y + 1.4}" width="${XS[2] - XS[0] + HW * 2}" height="2.6" rx="1.2" fill="#000" opacity=".45" filter="url(#wBl)"/><rect x="${XS[0] - HW}" y="${y}" width="${XS[2] - XS[0] + HW * 2}" height="2.6" rx="1.2" fill="url(#wTie)"/>`;
       g.innerHTML = `<rect x="-50" y="-67" width="120" height="134" fill="transparent"/>` + XS.map((x) => recess(x, 7.6, -22.6, 9.1)).join('') + XS.map((x) => flag(x + 0.4, -33.7, 9.4, 6.2)).join('') +
         ['u', 'm', 'd'].map((s) => { const [a, b, up] = POS[s];
-          return `<g class="lev" data-s="${s}" opacity="${s === 'd' ? 1 : 0}">${s !== 'd' ? [[-4.3, 12.4], [26.9, 43.6]].map(([p, q]) => `<rect x="${p}" y="5.6" width="${q - p}" height="4.2" fill="url(#wBody)"/>`).join('') : ''}${XS.map((x) => lever(x, a, b, HW, up, s !== 'm')).join('')}${tie(up ? a + 1.2 : b - 2.2)}</g>`; }).join('') +
+          return `<g class="lev" data-s="${s}" opacity="${s === 'd' ? 1 : 0}">${s !== 'd' ? [[-4.3, 12.4], [26.9, 43.6]].map(([p, q]) => `<rect x="${p}" y="5.6" width="${q - p}" height="4.2" fill="url(#wBody)"/>`).join('') : ''}${XS.map((x) => lever(x, a, b, HW, up, s !== 'm')).join('')}${bg3d ? '' : tie(up ? a + 1.2 : b - 2.2)}</g>`; }).join('') +
         `<text class="st" x="${cx}" y="63" text-anchor="middle" font-size="8.5" font-weight="800" font-family="Arial" paint-order="stroke" stroke="rgba(255,250,225,.85)" stroke-width="1.6"></text>
         <g class="lock" opacity="0" transform="translate(${cx},0)"><g filter="url(#wSh)"><path d="M-7 -29 v-8 a7 7 0 0 1 14 0 v8" fill="none" stroke="url(#wChrome)" stroke-width="3.2"/>
         <rect x="-11" y="-31" width="22" height="18" rx="2.5" fill="url(#wPad)"/><rect x="-11" y="-31" width="22" height="18" rx="2.5" fill="url(#wSpec)" opacity=".5"/><circle cx="0" cy="-23.5" r="2" fill="#2a0b07"/><rect x="-.7" y="-23" width="1.4" height="4" fill="#2a0b07"/></g>
@@ -335,19 +384,11 @@ export function createLessonScreen(opts = {}) {
       const lx = 51.8, HW = 6.6;
       g.innerHTML = `<rect x="-59" y="-66" width="124" height="132" fill="transparent"/>${recess(lx, 9, -19.1, 13.1)}${flag(51.9, -32.3, 10.4, 6.2)}` +
         `<g class="lev" data-s="u" opacity="0">${lever(lx, -17, 3.4, HW, 1, 1)}</g><g class="lev" data-s="d" opacity="1">${lever(lx, -9.5, 10.9, HW, 0, 1)}</g>` +
-        `<g transform="translate(25.5,11.9)">${bezel(7.6)}<circle r="5.9" fill="#0a0a0a"/><circle r="5.4" fill="url(#wTst)"/><circle r="5.4" fill="url(#wSpec)" opacity=".6"/><text y="2" text-anchor="middle" font-size="6" font-weight="800" fill="#24272b" font-family="Arial">T</text></g>
+        (bg3d ? `<g transform="translate(25.8,27)" class="tb" style="cursor:pointer"><rect x="-9" y="-9" width="18" height="18" fill="transparent"/><g class="tbc"><rect x="-7.6" y="-7.6" width="15.2" height="15.2" rx="1" fill="#000" opacity="0"/></g></g>` :
+        `<g transform="translate(25.5,11.9)" class="tb" style="cursor:pointer">${bezel(7.6)}<circle r="5.9" fill="#0a0a0a"/><g class="tbc"><circle r="5.4" fill="url(#wTst)"/><circle r="5.4" fill="url(#wSpec)" opacity=".6"/><text y="2" text-anchor="middle" font-size="6" font-weight="800" fill="#24272b" font-family="Arial">T</text></g></g>`) + `
         <text class="st" x="12.5" y="65" text-anchor="middle" font-size="8.5" font-weight="800" font-family="Arial" paint-order="stroke" stroke="rgba(255,250,225,.85)" stroke-width="1.6"></text>`;
     } else if (w.type === 'gst') {
-      const { w: gw, h: gh } = GSTr;
-      g.innerHTML = `<rect width="${gw}" height="${gh}" rx="5" fill="#f4f6f8" stroke="#8a96a2" stroke-width="2" filter="url(#fSh)"/>
-        <path d="M0 20 Q120 -10 210 60 L210 ${gh} L0 ${gh} Z" fill="#2c66c4" opacity=".95"/><path d="M0 50 Q90 30 170 90 L170 ${gh} L0 ${gh} Z" fill="#fff" opacity=".18"/>
-        ${['R', 'S', 'T'].map((p, i) => `<rect x="${24 + i * 92}" y="14" width="74" height="40" rx="3" fill="#1b1f24"/><rect x="${30 + i * 92}" y="19" width="62" height="24" fill="#a9bba0"/><text class="gv${p}" x="${88 + i * 92}" y="37" text-anchor="end" font-family="Consolas,monospace" font-size="16" font-weight="700" fill="#1d2618">0</text><text x="${30 + i * 92}" y="52" font-size="8" font-weight="800" fill="#fff" font-family="Arial">${p}</text><text x="${76 + i * 92}" y="52" font-size="6" fill="#fff" font-family="Arial">Volts</text>`).join('')}
-        <text x="${gw - 20}" y="16" text-anchor="end" font-size="9" font-weight="800" fill="#1e2a3a" font-family="Arial">Gerador de Sistemas Trifásicos  GST</text>
-        <rect x="${gw - 150}" y="26" width="120" height="34" rx="3" fill="#1b1f24"/><rect x="${gw - 144}" y="31" width="108" height="14" fill="#9fc28f"/><text class="gst" x="${gw - 90}" y="42" text-anchor="middle" font-family="Consolas,monospace" font-size="9" font-weight="700" fill="#1d2618">DESLIGADO</text><text x="${gw - 90}" y="56" text-anchor="middle" font-size="11" font-weight="800" fill="#fff" font-family="Arial" letter-spacing="8">RST</text>
-        ${Array.from({ length: 16 }, (_, i) => `<rect x="${gw - 140 + (i % 4) * 26}" y="${70 + Math.floor(i / 4) * 24}" width="20" height="18" rx="2" fill="#e6e8ea" stroke="#9aa"/>`).join('')}
-        <text x="14" y="${gh - 30}" font-size="9" font-weight="800" fill="#fff" font-family="Arial" transform="rotate(-90 14 ${gh - 30})">SAÍDAS</text>
-        ${[60, 150, 240].map((x, i) => `<text x="${x + 16}" y="${GSTr.h - 72}" font-size="8" font-weight="700" fill="#fff" font-family="Arial">${'RST'[i]}</text><text x="${x + 16}" y="${GSTr.h - 36}" font-size="6" fill="#fff" font-family="Arial">Neutro</text>`).join('')}
-        <circle class="gled" cx="${gw - 168}" cy="34" r="4" fill="#3a2a2a"/><text x="${gw - 176}" y="48" text-anchor="end" font-size="5.5" fill="#1e2a3a" font-family="Arial">SAÍDAS</text>`;
+      g.innerHTML = gstFront(GSTr.w, GSTr.h);
     } else if (w.type === 'extEmerg') {
       const { w: ew, h: eh } = EXTr;
       g.innerHTML = `<rect width="${ew}" height="${eh}" rx="6" fill="#2b2d30" stroke="#f2c514" stroke-width="3" stroke-dasharray="10 6" filter="url(#fSh)"/>
@@ -988,19 +1029,26 @@ export function createLessonScreen(opts = {}) {
       if (X.nr.loto) return say('Chave retirada e guardada pelo responsável do bloqueio (LOTO).', 'warn');
       X.key = !X.key; syncMain(); log(`Chave de comando ${X.key ? 'ligada' : 'desligada'}.`);
     } else if (w.type === 'dr') {
-      if (energized()) { sim.mainTrip = true; sim.tripBy = 'DR'; sim.dirty = true; sim.event('trip', 'Botão de teste T do DR acionado: o DR desarmou (teste periódico OK).'); }
-      else if (sim.mainTrip) { setMain(false); renderAll(); }
-      else say('Com a bancada desenergizada o teste do DR não atua.');
-    } else if (w.type === 'gst') openGST(e);
-    else if (w.type === 'ctd' || (w.type === 'relay' && /timer|yd/i.test(w.kind || ''))) openTimer(w, e);
+      const onT = e.target.closest && e.target.closest('.tb');
+      if (onT) {
+        w.tbUntil = performance.now() + 280;
+        if (energized()) { sim.mainTrip = true; sim.tripBy = 'DR'; sim.dirty = true; sim.event('trip', 'Botão de teste T do DR acionado: o DR desarmou (teste periódico OK).'); }
+        else say('Botão T: com a bancada desenergizada o teste do DR não atua.');
+      } else if (sim.mainTrip) { setMain(false); renderAll(); }
+      else if (energized()) { sim.mainTrip = true; sim.tripBy = 'DR'; sim.dirty = true; sim.event('info', 'Alavanca do DR baixada manualmente: bancada desenergizada pelo DR.'); renderAll(); }
+      else say('O DR é religado junto com a energização da bancada (botão “Energizar bancada”). Clique em T, com a bancada energizada, para testá-lo.');
+    } else if (w.type === 'gst') { const k = e.target.closest && e.target.closest('.gk'); if (k) gstKey(k.dataset.k); else openGST(e); }
+    else if (w.type === 'ctd') openCTD(w, e);
+    else if ( (w.type === 'relay' && /timer|yd/i.test(w.kind || ''))) openTimer(w, e);
     else if (w.type === 'relay' && w.kind === 'rca') openRCA(w, e);
     else if (w.type === 'K' || w.type === 'relay') { if (d) tipShow(e, `<b>${esc(d.name)}</b><br>${d.st.on ? 'bobina energizada — contatos comutados' : 'bobina desenergizada'}`); }
     updateWidgets();
   }
   function widgetUp() { if (held) { sim.press(held.dev, false); held = null; updateWidgets(); } }
-  const popAt = (e, h) => { pop.style.display = 'block'; pop.style.left = Math.min(innerWidth - 270, e.clientX + 10) + 'px'; pop.style.top = Math.max(10, Math.min(innerHeight - h, e.clientY - h / 2)) + 'px'; };
+  let popRefresh = null;
+  const popAt = (e, h, wd = 250) => { pop.style.width = wd + 'px'; pop.style.display = 'block'; pop.style.left = Math.max(10, Math.min(innerWidth - wd - 20, e.clientX + 10)) + 'px'; pop.style.top = Math.max(10, Math.min(innerHeight - h, e.clientY - h / 2)) + 'px'; };
   function openRCA(w, e) {
-    const d = sim.dev(w.dev);
+    const d = sim.dev(w.dev); pop.dataset.kind = 'rca'; popRefresh = null;
     pop.innerHTML = `<h4>${esc(d.name)}</h4><div class="row">Ajuste: <input type="range" id="lzIs" min="0.5" max="3" step="0.05" value="${d.st.Iset}"><b id="lzIsV">${num(d.st.Iset, 2)} A</b></div>
       <div class="row">Retardo: <input type="range" id="lzTd" min="0.5" max="10" step="0.5" value="${d.st.td}"><b id="lzTdV">${num(d.st.td, 1)} s</b></div>
       <div class="row">Medindo: <b>${num(d.st.I || 0, 2)} A</b> ${d.st.trip ? '<b style="color:#c62828">· ATUADO</b>' : ''}</div>
@@ -1014,29 +1062,113 @@ export function createLessonScreen(opts = {}) {
     pop.querySelector('#lzRx').onclick = () => (pop.style.display = 'none');
   }
   function openTimer(w, e) {
-    const d = sim.dev(w.dev);
+    const d = sim.dev(w.dev); pop.dataset.kind = 'timer'; popRefresh = null;
     pop.innerHTML = `<h4>${esc(d.name)}</h4><div class="row">Tempo: <input type="range" id="lzTm" min="1" max="20" step="1" value="${d.st.T}"><b id="lzTmV">${d.st.T} s</b></div><div class="row"><button id="lzTmX">Fechar</button></div>`;
     popAt(e, 110);
     pop.querySelector('#lzTm').oninput = (ev) => { d.st.T = +ev.target.value; pop.querySelector('#lzTmV').textContent = d.st.T + ' s'; };
     pop.querySelector('#lzTm').onchange = () => log(`${d.name}: tempo ajustado em ${d.st.T} s.`);
     pop.querySelector('#lzTmX').onclick = () => (pop.style.display = 'none');
   }
-  function openGST(e) {
+  // ---------- GST ----------
+  const gstW = () => W.find((x) => x.type === 'gst');
+  const seqT = () => (sim.gst.seq > 0 ? 'R-S-T' : 'R-T-S');
+  function gstRe() { sim.dirty = true; renderTop(); updateWidgets(); }
+  function gstOutputs(on) {
     const G = sim.gst;
+    if (on) {
+      if (!G.pw) return say('GST desligado: ligue o aparelho (botão “Ligar GST”).', 'warn');
+      if (G.fault) return say('GST em falha de saída: retire o curto/sobrecarga e rearme.', 'warn');
+      if (!X.started) return say('Inicie a aula antes de energizar o GST.', 'warn');
+      G.on = true; log(`GST: SAÍDAS ENERGIZADAS — ${GST_SYSTEMS[G.sys].t}, ${G.f} Hz, ${seqT()}${G.loss ? ', falta de ' + G.loss : ''}.`, 'w');
+    } else if (G.on) { G.on = false; log('GST em STAND BY (saídas desenergizadas).'); }
+    gstRe();
+  }
+  // tecla do teclado de membrana (frente do GST ou popup)
+  function gstKey(k) {
+    const G = sim.gst, w = gstW(); if (w) { w.kKey = k; w.kUntil = performance.now() + 220; }
+    if (!G.pw) { say('GST desligado: clique no GST e use “Ligar GST” para ligar o aparelho.', 'warn'); updateWidgets(); return; }
+    if (/^[1-6]$/.test(k)) {
+      const i = +k - 1;
+      if (G.on) say('Coloque o GST em <b>STAND BY</b> (tecla 0) antes de trocar o sistema.', 'warn');
+      else { sim.gstSystem(i); log(`GST: sistema ${GST_SYSTEMS[i].t} selecionado (${Math.round(sim.gst.V)} V fase-neutro${GST_SYSTEMS[i].N ? '' : ', sem neutro'}).`); }
+    } else if (/^[789]$/.test(k)) { const ph = 'RST'[+k - 7]; G.loss = G.loss === ph ? null : ph; log(`GST: ${G.loss ? 'falta da fase ' + G.loss + ' simulada' : 'fases completas'}.`, G.loss ? 'w' : ''); }
+    else if (k === '3F') { if (G.loss) log('GST: fases completas (3F).'); G.loss = null; }
+    else if (k === '+' || k === '−') { G.f = k === '+' ? 60 : 50; log(`GST: frequência ${G.f} Hz.`); }
+    else if (k === '∅') { G.seq = -G.seq; log(`GST: sequência de fases ${seqT()}${G.seq < 0 ? ' (inversa)' : ' (direta)'}.`, G.seq < 0 ? 'w' : ''); }
+    else if (k === '%') gstOutputs(!G.on);
+    else if (k === '0') gstOutputs(false);
+    else if (k === '2F') say('Tecla 2F (sistemas bifásicos) sem uso nesta bancada.');
+    gstRe(); if (pop.style.display === 'block' && pop.dataset.kind === 'gst') openGST(null);
+  }
+  let gstEv = null;
+  function openGST(e) {
+    const G = sim.gst; if (e) gstEv = { clientX: e.clientX, clientY: e.clientY }; const ev = gstEv || { clientX: innerWidth / 2, clientY: innerHeight / 2 };
+    const chip = (on, attr, t) => `<button ${attr} style="min-height:22px;padding:2px 7px;font-size:11px;${on ? 'background:#1f6fd1;color:#fff' : ''}">${t}</button>`;
+    pop.dataset.kind = 'gst';
     pop.innerHTML = `<h4>GST · Gerador de Sistemas Trifásicos</h4>
-      <div class="row"><button id="lzGon" class="${G.on ? 'red' : 'grn'}" style="background:${G.on ? '#c62828' : '#1a9c4a'};color:#fff">${G.on ? 'Desligar saídas' : 'Ligar saídas'}</button>${G.fault ? '<b style="color:#c62828">FALHA</b> <button id="lzGr">Rearmar</button>' : ''}</div>
-      <div class="row">Tensão de fase: <input type="range" id="lzGv" min="0" max="240" step="5" value="${G.V}"><b id="lzGvV">${G.V} V</b></div>
-      <div class="row">Sequência: <select id="lzGs"><option value="1" ${G.seq > 0 ? 'selected' : ''}>R-S-T (direta)</option><option value="-1" ${G.seq < 0 ? 'selected' : ''}>R-T-S (inversa)</option></select></div>
-      <div class="row">Falta de fase: <select id="lzGl"><option value="">nenhuma</option>${['R', 'S', 'T'].map((p) => `<option ${G.loss === p ? 'selected' : ''}>${p}</option>`).join('')}</select></div>
-      <div class="row"><button id="lzGx">Fechar</button></div><div style="color:#5d6b7e;font-size:11px">Fonte de ensaio para relés de proteção (RST-21, RCA…). Saídas R/S/T + neutro.</div>`;
-    popAt(e, 230);
-    const re = () => { sim.dirty = true; renderTop(); };
-    pop.querySelector('#lzGon').onclick = () => { if (!G.on && !X.started) return; G.on = !G.on; log(`GST: saídas ${G.on ? 'LIGADAS' : 'desligadas'} (${G.V} V, ${G.seq > 0 ? 'R-S-T' : 'R-T-S'}${G.loss ? ', falta de ' + G.loss : ''}).`, G.on ? 'w' : ''); re(); openGST(e); };
-    if (pop.querySelector('#lzGr')) pop.querySelector('#lzGr').onclick = () => { G.fault = false; re(); openGST(e); };
-    pop.querySelector('#lzGv').oninput = (ev) => { G.V = +ev.target.value; pop.querySelector('#lzGvV').textContent = G.V + ' V'; re(); };
-    pop.querySelector('#lzGs').onchange = (ev) => { G.seq = +ev.target.value; log(`GST: sequência ${G.seq > 0 ? 'R-S-T' : 'R-T-S'}.`); re(); };
-    pop.querySelector('#lzGl').onchange = (ev) => { G.loss = ev.target.value || null; log(`GST: ${G.loss ? 'falta de fase ' + G.loss : 'fases completas'}.`); re(); };
-    pop.querySelector('#lzGx').onclick = () => (pop.style.display = 'none');
+      <div class="row"><button id="lzGpw" style="background:${G.pw ? '#5d6b7e' : '#1a9c4a'};color:#fff">${G.pw ? '⏻ Desligar GST' : '⏻ Ligar GST'}</button>
+        <button id="lzGon" class="${G.pw && !G.fault ? '' : 'dis'}" style="background:${G.on ? '#c62828' : '#d97a00'};color:#fff">${G.on ? 'STAND BY (desenergizar saídas)' : 'Energizar saídas'}</button></div>
+      <div class="row" style="font:600 11px Consolas,monospace;background:#9fc28f;color:#14210f;padding:4px 6px;border-radius:3px;justify-content:space-between" id="lzGlcd"></div>
+      ${G.fault ? '<div class="row"><b style="color:#c62828">FALHA: curto/sobrecorrente na saída</b><button id="lzGr">Rearmar</button></div>' : ''}
+      <div style="font-weight:600;margin-top:6px">Sistema (teclas 1–6, só em STAND BY):</div>
+      <div class="row" style="flex-wrap:wrap;gap:4px">${GST_SYSTEMS.map((sy, i) => chip(G.sys === i, `data-gk="${i + 1}"`, sy.t)).join('')}</div>
+      <div class="row">Frequência: ${chip(G.f === 50, 'data-gk="−"', '50 Hz')}${chip(G.f === 60, 'data-gk="+"', '60 Hz')}<span style="flex:1"></span>Seq.: ${chip(false, 'data-gk="∅"', seqT())}</div>
+      <div class="row">Falta de fase <small style="color:#5d6b7e">(professor)</small>: <select id="lzGl"><option value="">nenhuma</option>${['R', 'S', 'T'].map((p) => `<option ${G.loss === p ? 'selected' : ''}>${p}</option>`).join('')}</select><span style="flex:1"></span><button id="lzGx">Fechar</button></div>
+      <div style="color:#5d6b7e;font-size:11px">Teclado: 1–6 sistema · 7/8/9 falta de R/S/T · 3F fases completas · + 60 Hz · − 50 Hz · ∅ sequência · % saídas ⇄ stand by · 0 stand by. Voltímetros: tensão fase-neutro. Fonte de ensaio para relés (RST-21, RCA…) — o aparelho real fornece só 30 W por fase.</div>`;
+    popAt(ev, 300, 340);
+    popRefresh = () => {
+      const L = pop.querySelector('#lzGlcd'); if (!L) return;
+      const live = G.pw && G.on && !G.fault;
+      L.innerHTML = G.pw ? ['R', 'S', 'T'].map((p) => `<span>${p} ${live && G.loss !== p ? Math.round(G.V) : 0} V</span>`).join('') + `<span>${G.fault ? 'FALHA' : live ? 'SAÍDAS ON' : 'STAND BY'}</span>` : '<span>aparelho desligado</span>';
+    };
+    popRefresh();
+    pop.querySelector('#lzGpw').onclick = () => { G.pw = !G.pw; if (!G.pw) { if (G.on) log('GST desligado com as saídas energizadas (saídas cortadas).'); G.on = false; } log(`GST ${G.pw ? 'LIGADO (STAND BY)' : 'desligado'}.`); gstRe(); openGST(null); };
+    pop.querySelector('#lzGon').onclick = () => { gstOutputs(!G.on); openGST(null); };
+    if (pop.querySelector('#lzGr')) pop.querySelector('#lzGr').onclick = () => { G.fault = false; G.on = false; log('GST rearmado (em STAND BY).'); gstRe(); openGST(null); };
+    pop.querySelectorAll('[data-gk]').forEach((b) => b.onclick = () => gstKey(b.dataset.gk));
+    pop.querySelector('#lzGl').onchange = (ev2) => { G.loss = ev2.target.value || null; log(`GST: ${G.loss ? 'falta de fase ' + G.loss : 'fases completas'}.`); gstRe(); };
+    pop.querySelector('#lzGx').onclick = () => { pop.style.display = 'none'; popRefresh = null; };
+  }
+  // ---------- CTD-02/03: P (PROG) / ▲ / ▼ / RESET ----------
+  function ctdKey(w, k) {
+    const d = sim.dev(w.dev);
+    if (!d.st.on) { say(`${d.name.split(' ·')[0]} sem alimentação (bornes 6-7): o display e as teclas só funcionam com o controlador energizado.`, 'warn'); return; }
+    if (k === 'P') {
+      if (!w.prog) { w.prog = true; w.sp = d.st.T; }
+      else { w.prog = false; if (w.sp !== d.st.T) { d.st.T = w.sp; log(`${d.name.split(' ·')[0]}: tempo programado ${num(d.st.T, 1)} s.`); } }
+    } else if (k === 'U' || k === 'D') {
+      if (!w.prog) say('Pressione <b>P</b> (PROG) para entrar na programação do tempo.');
+      else w.sp = Math.max(0.5, Math.min(99.5, Math.round((w.sp + (k === 'U' ? 0.5 : -0.5)) * 10) / 10));
+    } else if (k === 'R') { w.prog = false; d.st.t = 0; sim.dirty = true; log(`${d.name.split(' ·')[0]}: RESET — temporização reiniciada.`); }
+    updateWidgets();
+  }
+  function openCTD(w, e) {
+    const d = sim.dev(w.dev), nm = d.name.split(' ·')[0];
+    pop.dataset.kind = 'ctd';
+    const btn = (k, t, sub) => `<div style="text-align:center"><button data-ck="${k}" style="width:38px;height:38px;border-radius:50%!important;justify-content:center;background:#3f74df;color:#fff;font-size:15px;box-shadow:inset 0 0 0 2px #cfe0ff">${t}</button><div style="font-size:9.5px;color:#e6eeff;font-weight:700">${sub}</div></div>`;
+    pop.innerHTML = `<h4>${esc(nm)} · temporizador digital (retardo na energização)</h4>
+      <div style="background:#141518;border-radius:6px;padding:8px">
+        <div id="lzCdLcd" style="background:#060708;border-radius:3px;padding:4px 8px;font:700 30px/1 Consolas,monospace;color:#ff4b3a;text-align:right;text-shadow:0 0 4px #ff3b28;min-height:44px"></div>
+        <div id="lzCdLed" style="display:flex;justify-content:space-around;color:#9aa;font:700 9px Arial;margin:5px 0 7px"></div>
+        <div style="display:flex;justify-content:space-around;background:#2f62c9;border-radius:22px;padding:4px 2px">${btn('P', 'P', 'PROG')}${btn('U', '▲', '')}${btn('D', '▼', '')}${btn('R', '⊘', 'RESET')}</div></div>
+      <div class="row" style="justify-content:space-between"><span style="color:#5d6b7e;font-size:11px">P: programar/salvar · ▲▼: ±0,5 s · RESET: reinicia a contagem</span><button id="lzCdX">Fechar</button></div>`;
+    popAt(e, 250, 300);
+    popRefresh = () => {
+      const L = pop.querySelector('#lzCdLcd'); if (!L) return;
+      const st = ctdState(w, d);
+      L.innerHTML = st.on ? `<div style="font-size:11px;color:#5ef06a;text-shadow:0 0 3px #3dff6a;display:flex;justify-content:space-between"><span>SP ${st.sp}s</span><span style="color:#ffb020">${st.md}</span></div>${st.big}` : '<div style="font-size:11px;color:#555;text-align:center;padding-top:10px">sem alimentação (6-7)</div>';
+      pop.querySelector('#lzCdLed').innerHTML = [['OUT1', st.o1], ['OUT2', st.o2], ['CONT', false], ['TIMER', st.tm]].map(([t, on]) => `<span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px;background:${on ? '#ff3b28' : '#3a1d1a'};box-shadow:${on ? '0 0 5px #ff3b28' : 'none'}"></span>${t}</span>`).join('');
+    };
+    popRefresh();
+    pop.querySelectorAll('[data-ck]').forEach((b) => b.onclick = () => { ctdKey(w, b.dataset.ck); popRefresh && popRefresh(); });
+    pop.querySelector('#lzCdX').onclick = () => { pop.style.display = 'none'; popRefresh = null; };
+  }
+  // estado exibido no CTD: contagem regressiva do tempo restante; TIMER pisca contando; OUT1/OUT2 ao fim
+  function ctdState(w, d) {
+    const on = !!d.st.on, done = on && d.st.t >= d.st.T, blink = Math.floor(performance.now() / 350) % 2 === 0;
+    const sp = num(w.prog ? w.sp : d.st.T, 1);
+    const big = w.prog ? (blink ? num(w.sp, 1) : '') : num(Math.max(0, d.st.T - Math.min(d.st.t, d.st.T)), 1);
+    return { on, done, sp, big, md: w.prog ? 'PROG' : done ? 'FIM' : '', o1: done, o2: done, tm: on && !done && !w.prog && blink };
   }
 
   // ---------- atualização visual ----------
@@ -1058,8 +1190,10 @@ export function createLessonScreen(opts = {}) {
         const lc = d.type === 'rca' && d.st.trip ? '#ff3b28' : on ? '#3dff6a' : '#2a3a2c'; g.querySelector('.led').setAttribute('fill', lc); g.querySelector('.lh').setAttribute('fill', lc); g.querySelector('.lh').setAttribute('opacity', lc === '#2a3a2c' ? 0 : 0.8);
         const tm = Q('.tm'); tm.textContent = (d.type === 'timerOn' || d.type === 'ydRelay') && d.st.on ? `${num(Math.min(d.st.t, d.st.T), 1)}/${d.st.T} s` : d.type === 'rca' && d.st.trip ? 'ATUADO' : '';
       } else if (w.type === 'ctd') {
-        g.querySelector('.v').textContent = d.st.on ? Math.min(d.st.t, d.st.T).toFixed(1) : '0.0'; g.querySelector('.v').setAttribute('opacity', d.st.on ? 1 : 0);
-        g.querySelector('.sv').textContent = `SP ${d.st.T.toFixed(1)}s${d.st.on && d.st.t >= d.st.T ? ' OUT1' : ''}`; g.querySelector('.sv').setAttribute('opacity', d.st.on ? 1 : 0);
+        const st = ctdState(w, d); if (!st.on) w.prog = false;
+        g.querySelector('.disp').setAttribute('opacity', st.on ? 1 : 0);
+        g.querySelector('.v').textContent = st.big; g.querySelector('.sv').textContent = `SP ${st.sp}s`; g.querySelector('.md').textContent = st.md;
+        for (const [k, on] of [['o1', st.o1], ['o2', st.o2], ['ct', false], ['tm', st.tm]]) { const c = g.querySelector('.cl.' + k); c.setAttribute('fill', on ? '#ff3b28' : '#3a1d1a'); c.style.filter = on ? 'drop-shadow(0 0 1.5px #ff3b28)' : ''; }
       } else if (w.type === 'mainBreaker') {
         const trip = sim.mainTrip && sim.tripBy !== 'DR', pos = trip ? 'm' : X.qf ? 'u' : 'd';
         g.querySelectorAll('.lev').forEach((l) => l.setAttribute('opacity', l.dataset.s === pos ? 1 : 0));
@@ -1072,16 +1206,23 @@ export function createLessonScreen(opts = {}) {
       } else if (w.type === 'dr') {
         const trip = sim.mainTrip && sim.tripBy === 'DR', pos = !trip && X.qf ? 'u' : 'd'; g.querySelectorAll('.lev').forEach((l) => l.setAttribute('opacity', l.dataset.s === pos ? 1 : 0)); g.querySelector('.fl').setAttribute('fill', pos === 'u' ? '#e0281c' : '#1f9a4a');
         const t = Q('.st'); t.textContent = trip ? 'DR ATUADO' : ''; t.setAttribute('fill', '#c62828');
+        const pr = performance.now() < (w.tbUntil || 0); if (bg3d) g.querySelector('.tbc rect').setAttribute('opacity', pr ? 0.45 : 0); else { g.querySelector('.tbc').setAttribute('transform', pr ? 'translate(.3,.5) scale(.86)' : ''); g.querySelector('.tbc').style.filter = pr ? 'brightness(.75)' : ''; }
       } else if (w.type === 'gst') {
-        const G = sim.gst, live = G.on && !G.fault;
-        ['R', 'S', 'T'].forEach((p) => g.querySelector('.gv' + p).textContent = live && G.loss !== p ? String(G.V) : '0');
-        g.querySelector('.gst').textContent = G.fault ? 'FALHA SAÍDA' : live ? `${G.seq > 0 ? 'RST' : 'RTS'} ${G.V}V${G.loss ? ' -' + G.loss : ''}` : 'DESLIGADO';
-        g.querySelector('.gled').setAttribute('fill', live ? '#ff3b28' : '#3a2a2a');
+        const G = sim.gst, pw = !!G.pw, live = pw && G.on && !G.fault, sy = GST_SYSTEMS[G.sys] || GST_SYSTEMS[2], now = performance.now(), blink = Math.floor(now / 400) % 2 === 0;
+        ['R', 'S', 'T'].forEach((p) => g.querySelector('.gv' + p).textContent = live && G.loss !== p ? String(Math.round(G.V)) : '0');
+        const L = { gLen: live, gLsb: pw && !G.on || (pw && G.fault && blink), gLon: pw, gLfa: false, gLf50: pw && G.f === 50, gLf60: pw && G.f === 60 };
+        GST_SYSTEMS.forEach((_, i) => (L['gLs' + i] = pw && G.sys === i));
+        g.querySelectorAll('.gL').forEach((l) => { const k = [...l.classList].find((c) => c !== 'gL'), on = !!L[k], c = l.dataset.c; l.querySelector('.ld').setAttribute('fill', on ? c : '#3b3434'); l.querySelector('.lh').setAttribute('opacity', on ? 0.85 : 0); });
+        g.querySelector('.glb').setAttribute('opacity', pw ? 0.55 : 0);
+        g.querySelector('.gl1').textContent = pw ? `${sy.t} ${G.f}Hz` : '';
+        g.querySelector('.gl2').textContent = !pw ? '' : G.fault ? 'FALHA: SOBRECORR.' : live ? `SAIDAS ON ${G.seq > 0 ? 'RST' : 'RTS'}${G.loss ? ' -' + G.loss : ''}` : 'STAND BY';
+        g.querySelectorAll('.gk').forEach((k) => { const pr = k.dataset.k === w.kKey && now < (w.kUntil || 0); k.querySelector('.gkc').setAttribute('transform', pr ? `translate(${(+k.querySelector('rect').getAttribute('x') + 11.5) * 0.06},${(+k.querySelector('rect').getAttribute('y') + 13.5) * 0.06 + 0.5}) scale(.94)` : ''); });
       } else if (w.type === 'motorMount') {
         const rpm = sim.dev(R.M).st.rpm || 0;
         Q('.rpm').textContent = Math.abs(rpm) < 5 ? 'parado' : `${Math.round(Math.abs(rpm))} rpm ${rpm > 0 ? '↻' : '↺'}`;
       } else if (w.type === 'motorArea') { const m = sim.dev(R.M).st; const v = m.Vw ? Math.max(...m.Vw) : 0; g.querySelector('.glow').setAttribute('opacity', Math.min(0.32, v / 380 * 0.32)); }
     }
+    if (popRefresh && pop.style.display === 'block') popRefresh();
     if (dlgDiag) {
       $('#lzDlg').querySelectorAll('[data-coil]').forEach((c) => { const d = sim.dev(c.dataset.coil); c.classList.toggle('on', !!(d && d.st.on)); });
       $('#lzDlg').querySelectorAll('[data-lamp]').forEach((c) => { const d = sim.dev(c.dataset.lamp); c.classList.toggle('on', !!(d && (d.st.lit || d.st.on))); });
@@ -1103,7 +1244,8 @@ export function createLessonScreen(opts = {}) {
   function updateCards() {
     const m = sim.dev(R.M).st, rca = sim.dev(R.RCA).st;
     const Iw = m.Iw || [0, 0, 0], line = m.conn === 'Δ' ? Iw.map((x) => x * Math.sqrt(3)) : Iw;
-    const st = !energized() && !m.running ? 'parado' : m.hum ? 'travado · zumbido' : m.running ? (Math.abs(m.rpm) > 1650 ? 'em regime' : 'acelerando') : 'parado';
+    const st = !energized() && !m.running ? 'parado' : m.hum ? 'travado · zumbido' : m.running ? (Math.abs(m.rpm) > 1650 * (m.fr || 1) ? 'em regime' : Math.abs(m.rpm) < (updateCards.rpm || 0) - 0.5 ? 'desacelerando' : 'acelerando') : 'parado';
+    updateCards.rpm = Math.abs(m.rpm || 0);
     const ms = $('#lzMotSt'); ms.textContent = st; ms.style.background = m.hum ? '#fdeeee' : m.running ? '#eef8f1' : '#fff';
     $('#lzMotKV').innerHTML = `<span>Rotação</span><b>${Math.abs(m.rpm || 0).toFixed(0)} rpm</b><span>Sentido</span><b>${m.running ? (m.rpm > 0 ? 'horário' : 'anti-horário') : '—'}</b>
       <span>Fechamento</span><b>${m.conn === 'Δ' ? 'Δ triângulo' : m.conn === 'Y' ? 'Y estrela' : '—'}</b><span>Tensão/enrol.</span><b>${m.Vw ? Math.round(Math.max(...m.Vw)) : 0} V</b>
@@ -1120,6 +1262,7 @@ export function createLessonScreen(opts = {}) {
       if (ev.type === 'short') { X.stats.shorts++; flash(); say('💥 ' + ev.msg, 'err'); log('CURTO-CIRCUITO: ' + ev.msg, 'e'); renderTop(); renderNR(); }
       else if (ev.type === 'trip') { X.stats.trips++; say(ev.msg, 'warn'); log(ev.msg, 'w'); if (/curto/.test(ev.msg)) { X.stats.shorts++; flash(); } }
       else if (ev.type === 'burn') { say('🔥 ' + ev.msg, 'err'); log(ev.msg, 'e'); flash(); }
+      else if (ev.type === 'warn' && ev.dev) { say('⚠ ' + ev.msg, 'warn'); log(ev.msg, 'w'); }
       else log(ev.msg, ev.type === 'warn' ? 'w' : '');
     }
   }
@@ -1209,8 +1352,10 @@ export function createLessonScreen(opts = {}) {
   Object.assign(window.__lesson, {
     wireT(a, b, color = 'R') { const A = jackOfTerm(a), B = jackOfTerm(b); if (!A || !B) throw new Error('borne inexistente ' + (!A ? a : b)); doAdd(A.id, B.id); },
     setColor(c) { X.color = c; }, check: () => runCheck(true), nrAction, setMain, openEnergize, openReport, openDiagrams, setTab, reportText, startScript(id, name = 'Teste') { X.student = name; X.script = scriptById(id); X.started = true; X.t0 = performance.now(); closeDialog(); renderAll(); },
-    tick: (dt) => update(dt),
-    probe(a, b) { X.meter.test = 0; X.meter.red = jackOfTerm(a).id; X.meter.black = jackOfTerm(b).id; drawProbes(); return meterRead(); }, press: (id, v) => sim.press(id, v), dialog, closeDialog, zoomAt, say, testMeter: () => $('#lzTest').click(),
+    tick: (dt) => update(dt), gstKey, gstOutputs, openGST: () => openGST({ clientX: innerWidth / 2, clientY: innerHeight / 2 }),
+    ctdKey: (id, k) => ctdKey(W.find((x) => x.dev === id), k), openCTD: (id) => { const w = W.find((x) => x.dev === id); const r = w.g.getBoundingClientRect(); openCTD(w, { clientX: r.right, clientY: r.top + r.height / 2 }); },
+    fitRect, press: (id, v) => { sim.press(id, v); updateWidgets(); }, widgets: W,
+    probe(a, b) { X.meter.test = 0; X.meter.red = jackOfTerm(a).id; X.meter.black = jackOfTerm(b).id; drawProbes(); return meterRead(); }, dialog, closeDialog, zoomAt, say, testMeter: () => $('#lzTest').click(),
   });
   return { open, close, isOpen: () => root.classList.contains('on'), update: (dt) => { lastCall = performance.now(); update(dt); } };
 }

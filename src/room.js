@@ -3,9 +3,9 @@
 // As baias (pilares, caixas 4x4, eletrodutos verticais, placas das baias) são do agente "boxes" (src/booths.js).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { ROOM, BOOTHS, SOLAR, CENTER, WALK, BENCH_ROW } from './layout.js?v=20261014214920';
-import { floorTextures, stripeTextures, wallTexture, exitSign, extinguisherSign, boardSign, bannerTexture, bluePlate, rng } from './room_tex.js?v=20261014214920';
-import { buildCeiling } from './room_ceiling.js?v=20261014214920';
+import { ROOM, BOOTHS, SOLAR, CENTER, WALK, BENCH_ROW } from './layout.js?v=20261014221936';
+import { floorTextures, stripeTextures, wallTexture, exitSign, extinguisherSign, boardSign, bannerTexture, bluePlate, rng } from './room_tex.js?v=20261014221936';
+import { buildCeiling } from './room_ceiling.js?v=20261014221936';
 
 const box = (w, h, d, x, y, z) => { const g = new THREE.BoxGeometry(w, h, d); g.translate(x, y, z); return g; };
 

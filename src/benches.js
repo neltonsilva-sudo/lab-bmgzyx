@@ -2,10 +2,10 @@
 // chapa perfurada, prateleira inclinada, estrutura tubular, cabos de teste pendurados, cabos descendo do teto).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { BENCH_ROW, BENCHES, ROOM } from './layout.js?v=20261014214920';
-import * as TX from './benches_tex.js?v=20261014214920';
-import * as PG from './benches_parts.js?v=20261014214920';
-import { LAYOUTS, TITLES } from './benches_layouts.js?v=20261014214920';
+import { BENCH_ROW, BENCHES, ROOM } from './layout.js?v=20261014221936';
+import * as TX from './benches_tex.js?v=20261014221936';
+import * as PG from './benches_parts.js?v=20261014221936';
+import { LAYOUTS, TITLES } from './benches_layouts.js?v=20261014221936';
 
 const LW = 1.73, LH = 0.93;            // face nominal do layout (m)
 const JC = { K: 0x161616, R: 0xc41c1c, W: 0xe4e4dc, B: 0x1c4fc8, Y: 0xe8bf12, G: 0x1f9a3c };
@@ -51,6 +51,11 @@ export function buildBenches(scene, ctx) {
   // plástico técnico semibrilho (disjuntores, contatores, relés, botoeiras) e metal dos parafusos de borne
   const mPlastic = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.0, clearcoat: 0.35, clearcoatRoughness: 0.42 });
   const mMetal = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.3, metalness: 0.85 });
+  // bornes: plástico injetado brilhante (as fotos mostram reflexos nítidos nas capas)
+  const mJack = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.34, metalness: 0.0, clearcoat: 0.6, clearcoatRoughness: 0.25 });
+  // impressões dos componentes da b1 (atlas único 2048²; planos transparentes colados nas faces das peças)
+  const ATL = TX.b1Atlas(renderer);
+  const mDecal = new THREE.MeshStandardMaterial({ map: ATL.tex, transparent: true, depthWrite: false, roughness: 0.48, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
   // sombra projetada dos módulos sobre o trilho DIN (plano translúcido com bordas suaves)
   const mRailShadow = (() => { const c = document.createElement('canvas'); c.width = 64; c.height = 16; const gg = c.getContext('2d');
     const gr = gg.createLinearGradient(0, 0, 64, 0); gr.addColorStop(0, 'rgba(0,0,0,0.75)'); gr.addColorStop(0.55, 'rgba(0,0,0,0.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
@@ -66,25 +71,35 @@ export function buildBenches(scene, ctx) {
   const mModBody = new THREE.MeshStandardMaterial({ color: 0xdfe2e3, roughness: 0.6, roughnessMap: noiseRep });
   const dispMat = {};
   for (const k of ['red', 'blue', 'green']) { const t = TX.displayTex(renderer, k); dispMat[k] = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.9, roughness: 0.2 }); }
+  // lentes (policarbonato translúcido): verniz brilhante + leve emissão mesmo apagadas (luz ambiente atravessando)
+  const lens = (color, emissive, ei) => new THREE.MeshPhysicalMaterial({ color, emissive, emissiveIntensity: ei, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.06 });
   const domeMat = {
-    R: [new THREE.MeshStandardMaterial({ color: 0xff3020, emissive: 0xff2010, emissiveIntensity: 1.6, roughness: 0.25 }), new THREE.MeshStandardMaterial({ color: 0x9a1810, emissive: 0x300000, roughness: 0.25 })],
-    G: [new THREE.MeshStandardMaterial({ color: 0x40ff60, emissive: 0x10ff30, emissiveIntensity: 1.4, roughness: 0.25 }), new THREE.MeshStandardMaterial({ color: 0x1f8a30, emissive: 0x002a08, roughness: 0.25 })],
-    Y: [new THREE.MeshStandardMaterial({ color: 0xffd040, emissive: 0xffb000, emissiveIntensity: 1.4, roughness: 0.25 }), new THREE.MeshStandardMaterial({ color: 0xd8a818, emissive: 0x302000, roughness: 0.25 })],
+    R: [lens(0xe01808, 0xd01000, 1.1), lens(0xa01408, 0x300300, 1)],
+    G: [lens(0x40ff60, 0x10ff30, 1.4), lens(0x1f8a30, 0x002a08, 1)],
+    Y: [lens(0xf6d214, 0xffc800, 1.3), lens(0xf2cc10, 0x4a3a00, 1)],
   };
 
   // ---------- registro de instâncias (todas as bancadas juntas) ----------
   const defs = {
-    jack: [PG.jackGeo(q), mVC], contactor: [PG.contactorGeo(), mVC], contactorS: [PG.contactorGeo(), mVC],
+    jack: [PG.jackGeo(q), mJack, PG.jackGeo(q, 'm')], contactor: [PG.contactorGeo(), mVC], contactorS: [PG.contactorGeo(), mVC],
     relay: [PG.relayGeo('relay'), mVC], timer: [PG.relayGeo('timer'), mVC], breaker: [PG.breakerGeo(), mVC], prot: [PG.protRelayGeo(), mVC],
     rail: [PG.railGeo(), mRail], button: [PG.buttonGeo(), mPlastic], bezel: [PG.bezelGeo(), mPlastic], selector: [PG.selectorGeo(), mPlastic],
     emerg: [PG.emergGeo(), mVC], meter: [PG.meterGeo(), mVC], screw: [PG.screwGeo(), mRail], box: [PG.unitBox(), mVC], plug: [PG.plugGeo(), mVC],
     // 3º item = geometria dos parafusos (InstancedMesh metálica gêmea, mesmas matrizes); brk3/dr4 compensam a escala do layout (1.8/1.5 × 1.04)
     k3rt: [PG.contactor3rtGeo(), mPlastic, PG.contactor3rtGeo('m')], ctd: [PG.ctdGeo(), mPlastic, PG.ctdGeo('m')],
+    k3rt_d: [PG.contactorDecals(ATL.R), mDecal], ctd_d: [PG.ctdDecals(ATL.R), mDecal],
+    brk3_d: [PG.breakerDecals(ATL.R, 3, false, 1.8, 1.04), mDecal], dr4_d: [PG.breakerDecals(ATL.R, 4, true, 1.5, 1.04), mDecal],
+    keysw: [PG.keySwitchGeo(), mPlastic, PG.keySwitchGeo('m')],
     tall: [PG.tallRelayGeo(false), mPlastic, PG.tallRelayGeo(false, 'm')], tallD: [PG.tallRelayGeo(true), mPlastic, PG.tallRelayGeo(true, 'm')],
     brk3: [PG.breakerNGeo(3, false, 'p', 1.8, 1.04), mPlastic, PG.breakerNGeo(3, false, 'm', 1.8, 1.04)],
     dr4: [PG.breakerNGeo(4, true, 'p', 1.5, 1.04), mPlastic, PG.breakerNGeo(4, true, 'm', 1.5, 1.04)],
     tube: [PG.box(1, 1, 1, 0, 0, 0, 0xffffff), mTube], railShadow: [new THREE.PlaneGeometry(1, 1), mRailShadow], foot: [PG.cylZ(0.022, 0.018, 0, 0x202020, 12), mVC],
   };
+  // módulos DIN da b1 por modelo (geometria com/sem potenciômetro + impressões próprias)
+  for (const [v, o] of Object.entries(TX.RELAY_VAR)) {
+    defs['tr_' + v] = [PG.tallRelayGeo(!!o.dark, 'p', !!o.pot), mPlastic, PG.tallRelayGeo(!!o.dark, 'm', !!o.pot)];
+    defs['tr_' + v + '_d'] = [PG.relayDecals(ATL.R, v, o.sx, TX.RELAY_SY), mDecal];
+  }
   for (const k of ['red', 'blue', 'green']) defs['disp_' + k] = [PG.displayPlane(), dispMat[k]];
   const dome = PG.domeGeo();
   for (const c of 'RGY') for (const on of [0, 1]) defs[`dome${c}${on}`] = [dome, domeMat[c][on ? 0 : 1]];
@@ -95,6 +110,7 @@ export function buildBenches(scene, ctx) {
     const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), tmpQ, new THREE.Vector3(sx, sy, sz));
     m.premultiply(parent);
     inst[key].m.push(m); inst[key].c.push(tmpC.set(color).clone());
+    const d = inst[key + '_d']; if (d) { d.m.push(m); d.c.push(new THREE.Color(0xffffff)); }   // impressões acompanham a peça
   }
   // tubos (cabos) mesclados por grupo
   const cableGeos = { wireW: [], wireR: [], lead: [], ceiling: [] };
@@ -137,7 +153,7 @@ export function buildBenches(scene, ctx) {
     // face serigrafada
     const ppm = low ? 700 : (b.id === 'b1' ? 2400 : 1250);
     const P = TX.facePainter(LW, LH, ppm);
-    const faceMat = b.id === 'b1' ? new THREE.MeshPhysicalMaterial({ color: 0xdcdcdc, roughness: 0.55, clearcoat: 0.2, clearcoatRoughness: 0.35 }) : new THREE.MeshPhysicalMaterial({ color: 0xcfd1d2, roughness: 0.72, clearcoat: 0.1, clearcoatRoughness: 0.4 });
+    const faceMat = b.id === 'b1' ? new THREE.MeshPhysicalMaterial({ color: 0xdcdcdc, roughness: 0.5, clearcoat: 0.5, clearcoatRoughness: 0.14 }) : new THREE.MeshPhysicalMaterial({ color: 0xcfd1d2, roughness: 0.72, clearcoat: 0.1, clearcoatRoughness: 0.4 });
     const face = new THREE.Mesh(new THREE.PlaneGeometry(FW, FH), faceMat);
     face.position.set(0, FCY, 0); face.receiveShadow = true; panel.add(face);
     // moldura (borda cinza levemente saliente)
@@ -164,12 +180,14 @@ export function buildBenches(scene, ctx) {
       // sombra suave pintada na face (deslocada para baixo-direita) + faixa de sombra no trilho DIN
       soft(x, y, w, h, railY) {
         if (b.id !== 'b1') return;
-        const gg = P.g; gg.save(); gg.shadowColor = 'rgba(60,40,0,0.55)'; gg.shadowBlur = P.S(0.012); gg.shadowOffsetX = P.S(0.005); gg.shadowOffsetY = P.S(0.008);
-        gg.fillStyle = 'rgba(60,40,0,0.35)'; gg.fillRect(P.X(x - w / 2), P.Y(y + h / 2), P.S(w), P.S(h)); gg.restore();
+        // só a sombra desfocada (o retângulo em si é desenhado fora do canvas e deslocado pela sombra) → sem borda dura
+        const gg = P.g, off = P.W + P.S(1); gg.save(); gg.shadowColor = 'rgba(60,40,0,0.6)'; gg.shadowBlur = P.S(0.011); gg.shadowOffsetX = P.S(0.004) + off; gg.shadowOffsetY = P.S(0.006);
+        gg.fillStyle = '#000'; gg.fillRect(P.X(x - w / 2) - off, P.Y(y + h / 2), P.S(w), P.S(h)); gg.restore();
         if (railY != null && !low) put('railShadow', BM, px(x + w / 2) + 0.007, py(railY), Z0 + 0.0088, 0.016, 0.042, 1, 0xffffff);
       },
-      dev(key, x, y, sx = 1, sy = 1) {
-        put(key, BM, px(x), py(y), Z0 + 0.0075, sx, sy, 1, 0xffffff);
+      dev(key, x, y, sx = 1, sy = 1, name) {
+        const v = name && (key === 'tall' || key === 'tallD') ? 'tr_' + name.slice(0, 3) : null;
+        put(v && defs[v] ? v : key, BM, px(x), py(y), Z0 + 0.0075, sx, sy, 1, 0xffffff);
         if (key === 'tall' || key === 'tallD') A.soft(x + 0.002, y, 0.032 * sx / SX, 0.12 * sy, A._railY);
         if (key === 'brk3' || key === 'dr4') A.soft(x, y, (key === 'brk3' ? 0.054 : 0.072) * sx / SX, 0.12 * sy, A._railY);
       },
@@ -240,7 +258,7 @@ export function buildBenches(scene, ctx) {
       },
       sel(x, y, sc, rz = -0.6) { put('selector', BM, px(x), py(y), Z0, sc || 1, sc || 1, sc || 1, 0xffffff, 0, 0, rz); if (!sc) A.label('0   1', x, y + 0.026, 0.0075); },
       knob(x, y, col = 0x1a1a1a) { put('button', BM, px(x), py(y), Z0, 0.8, 0.8, 1.2, col); },
-      keySwitch(x, y) { put('selector', BM, px(x), py(y), Z0, 0.8, 0.8, 0.8, 0xffffff); put('box', BM, px(x) + 0.01, py(y) - 0.03, 0.02, 0.018, 0.035, 0.002, 0xd8b890, 0, 0, 0.2); },
+      keySwitch(x, y) { put(b.id === 'b1' ? 'keysw' : 'selector', BM, px(x), py(y), Z0, 0.8, 0.8, 0.8, 0xffffff); put('box', BM, px(x) + 0.01, py(y) - 0.03, 0.02, 0.018, 0.035, 0.002, 0xd8b890, 0, 0, 0.2); },
       emerg(x, y) {
         P.circle(x, y, 0.036, '#f2c514'); P.circle(x, y, 0.036, 'rgba(0,0,0,0.3)', 0.0015);
         P.text('EMERGÊNCIA', x, y - 0.043, 0.007, { weight: 700 });
@@ -427,7 +445,7 @@ export function buildBenches(scene, ctx) {
     for (let i = 0; i < L; i++) { im.setMatrixAt(i, inst[k].m[i]); im.setColorAt(i, inst[k].c[i]); }
     im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true;
     im.computeBoundingSphere();
-    im.castShadow = ['tube', 'box', 'k3rt', 'ctd', 'tall', 'tallD', 'brk3', 'dr4', 'contactor', 'relay', 'timer', 'prot', 'meter'].includes(k); im.receiveShadow = k === 'tube';
+    im.castShadow = ['tube', 'box', 'k3rt', 'ctd', 'tall', 'tallD', 'brk3', 'dr4', 'contactor', 'relay', 'timer', 'prot', 'meter', 'keysw'].includes(k) || (/^tr_[A-Z]+$/.test(k)); im.receiveShadow = k === 'tube';
     g.add(im);
   }
   for (const k in cableGeos) {

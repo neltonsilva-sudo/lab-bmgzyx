@@ -17,13 +17,28 @@ export function cylZ(r, h, z, col, seg = 14, x = 0, y = 0, r2) {
 }
 const merge = (arr) => { const m = mergeGeometries(arr.map((g) => g.index ? g.toNonIndexed() : g)); m.computeBoundingSphere(); return m; };
 
-// Borne fêmea tipo banana 4 mm: flange + corpo colorido + furo escuro (cor final = instanceColor × vértice).
-export function jackGeo(q) {
+// Borne fêmea tipo banana 4 mm (fotos d4319/d4320): flange + corpo serrilhado (recartilhado) colorido, borda chanfrada
+// e furo; part 'm' = luva metálica de contato visível dentro do furo (InstancedMesh metálica gêmea).
+function knurl(g, n, amp) {                         // serrilha: raio alterna a cada vértice radial (eixo y antes de girar)
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i), r = Math.hypot(x, z); if (r < 1e-6) continue;
+    const a = Math.atan2(z, x), k = Math.round(((a / (Math.PI * 2)) * n * 2 + n * 4)) % 2 ? 1 : 1 - amp;
+    p.setX(i, x * k); p.setZ(i, z * k);
+  }
+  g.computeVertexNormals(); return g;
+}
+export function jackGeo(q, part = 'p') {
   const s = q === 'low' ? 8 : 12;
+  if (part === 'm') return merge([cylZ(0.0037, 0.0008, 0.0161, 0xd6d6d2, s * 2), cylZ(0.0026, 0.0004, 0.0165, 0x77776f, s)]);
+  const kn = q === 'low' ? 10 : 18, body = new THREE.CylinderGeometry(0.0079, 0.0084, 0.0115, kn * 2, 1);
+  knurl(body, kn, 0.075); body.rotateX(Math.PI / 2); body.translate(0, 0, 0.0083); paint(body, 0xffffff);
   return merge([
     cylZ(0.0105, 0.0026, 0.0013, 0xb8b8b8, s),
-    cylZ(0.0084, 0.012, 0.0085, 0xffffff, s, 0, 0, 0.0078),
-    cylZ(0.0033, 0.0012, 0.0146, 0x101010, 8),
+    body,
+    cylZ(0.0078, 0.0018, 0.0149, 0xf2f2f2, s * 2, 0, 0, 0.0064),       // borda chanfrada (pega o brilho)
+    cylZ(0.0047, 0.0006, 0.0158, 0x2a2a2a, s),                           // rebaixo escuro em volta da luva
+    cylZ(0.0017, 0.0004, 0.0168, 0x050505, 8),                           // furo
   ]);
 }
 
@@ -87,7 +102,16 @@ export function railGeo() {
   return merge([box(1, 0.035, 0.0015, 0, 0, 0.00075, 0xd0d3d6), box(1, 0.005, 0.0075, 0, 0.015, 0.0045, 0xc4c7ca), box(1, 0.005, 0.0075, 0, -0.015, 0.0045, 0xc4c7ca),
     box(1, 0.0012, 0.0015, 0, 0.0005, 0.0018, 0x8a8d90)]);
 }
-export function domeGeo() { const g = new THREE.SphereGeometry(0.0105, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2); g.rotateX(Math.PI / 2); g.translate(0, 0, 0.010); return g; }
+// Lente de sinaleiro com anéis de Fresnel (fotos d4321: ENERGIZADO e SN1): perfil torneado com ondulações concêntricas.
+export function domeGeo() {
+  const pts = [], R = 0.0112, N = 22;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, r = R * t, z = 0.0068 * Math.sqrt(Math.max(0, 1 - t * t * 0.92)) + (t > 0.25 && t < 0.97 ? 0.00028 * Math.cos(t * Math.PI * 14) : 0);
+    pts.push(new THREE.Vector2(Math.max(1e-5, r), z));
+  }
+  pts.push(new THREE.Vector2(R, 0)); pts.reverse();
+  const g = new THREE.LatheGeometry(pts, 28); g.rotateX(Math.PI / 2); g.translate(0, 0, 0.0092); g.computeVertexNormals(); return g;
+}
 
 // Botão de emergência (cogumelo vermelho) sobre base.
 export function emergGeo() {
@@ -170,67 +194,83 @@ const build = (fn, part, sx = 1, sy = 1) => {
 // Contator compacto tipo 3RT (foto frontal do KET-1030): base escura atrás, corpo azul-acinzentado em dois níveis
 // (blocos de bornes em cima/embaixo mais altos), janela do indicador de posição, plaqueta branca, bloco auxiliar à direita.
 // Os terminais (x=-0.019/-0.0065/0.006, y=±0.04, z≈0.09 e aux x=0.025, y=±0.028, z≈0.077) casam com os fios do layout.
+// cilindro ao longo de x (tambor das alavancas)
+function cylX(r, len, x, y, z, col, seg = 16) { const g = new THREE.CylinderGeometry(r, r, len, seg); g.rotateZ(Math.PI / 2); g.translate(x, y, z); return paint(g, col); }
+
+// Decalques (impressões) do atlas TX.b1Atlas: items = [nome, x, y, z] em coordenadas FINAIS (mundo) da peça; a geometria é
+// reduzida por 1/sx,1/sy para compensar a escala da instância (texto sem distorção).
+export function decalGeo(R, items, sx = 1, sy = 1) {
+  const gs = items.map(([n, x, y, z]) => {
+    const r = R[n], g = new THREE.PlaneGeometry(r.w, r.h), uv = g.attributes.uv, [u0, v0, u1, v1] = r.uv;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + uv.getX(i) * (u1 - u0), v0 + uv.getY(i) * (v1 - v0));
+    g.translate(x, y, z); return g;
+  });
+  const m = mergeGeometries(gs); if (sx !== 1 || sy !== 1) m.scale(1 / sx, 1 / sy, 1); m.computeBoundingSphere(); return m;
+}
+
+// Contator compacto tipo 3RT (foto d4319): corpo azul-claro em dois níveis, 3 janelas escuras com corrediças cinza
+// (indicadores de posição), bloco auxiliar lateral plano com etiqueta branca. Sem base preta atrás (removida a pedido).
+// Os terminais (x=-0.019/-0.0065/0.006, y=±0.04, z≈0.09 e aux x=0.025, y=±0.028, z≈0.077) casam com os fios do layout.
 export function contactor3rtGeo(part = 'p') {
   return build((P, M) => {
-    const BL = 0x8ba3ba, BL2 = 0x9cb1c5, DK = 0x17181b;
-    P.push(rbox(0.058, 0.106, 0.03, -0.006, 0, 0.015, 0x2a2b2e, 0.0025, 0.003));          // base/trilho
-    P.push(rbox(0.049, 0.101, 0.056, -0.006, 0, 0.038, BL, 0.0042, 0.003));                // corpo (chanfro largo)
-    for (const s of [1, -1]) P.push(box(0.0012, 0.094, 0.05, -0.006 + s * 0.0247, 0, 0.038, 0x5e7184)); // vinco lateral
+    const BL = 0x8fb0d2, BL2 = 0xa2c0de, DK = 0x17181b, EDGE = 0x6f88a3;
+    P.push(rbox(0.049, 0.101, 0.056, -0.006, 0, 0.034, BL, 0.0042, 0.003));                // corpo (chanfro largo)
+    for (const s of [1, -1]) P.push(box(0.0012, 0.094, 0.05, -0.006 + s * 0.0247, 0, 0.036, EDGE)); // vinco lateral
     for (const s of [1, -1]) {
       P.push(rbox(0.046, 0.026, 0.026, -0.006, s * 0.036, 0.077, BL2, 0.0032, 0.002));     // blocos de bornes (degrau)
-      P.push(box(0.044, 0.0012, 0.001, -0.006, s * 0.0235, 0.0655, 0x5d6f80));               // sombra do degrau
+      P.push(box(0.044, 0.0012, 0.001, -0.006, s * 0.0235, 0.0655, 0x5d7590));               // sombra do degrau
       for (let i = 0; i < 3; i++) {
         const x = -0.019 + i * 0.0125;
         P.push(rbox(0.0095, 0.0095, 0.002, x, s * 0.04, 0.0895, DK, 0.0004, 0.0008));        // rebaixo do borne
         P.push(box(0.009, 0.0035, 0.004, x, s * 0.0485, 0.08, DK));                           // entrada do cabo
-        P.push(box(0.0006, 0.02, 0.0006, x + 0.00625, s * 0.036, 0.0902, 0x6f8295));          // nervura entre polos
+        P.push(box(0.0006, 0.02, 0.0006, x + 0.00625, s * 0.036, 0.0902, 0x7e97b2));          // nervura entre polos
         screwHead(M, x, s * 0.04, 0.0898, 0.0031);
-        P.push(box(0.004, 0.0022, 0.0004, x, s * 0.0285, 0.0902, 0xf2f2f0));                  // número do borne
       }
     }
-    P.push(rbox(0.043, 0.046, 0.006, -0.006, 0, 0.0655, 0x6c8095, 0.001, 0.002));           // rebaixo escuro em volta da frente
+    P.push(rbox(0.043, 0.046, 0.006, -0.006, 0, 0.0655, 0x6f87a2, 0.001, 0.002));           // rebaixo em volta da frente
     P.push(rbox(0.041, 0.042, 0.018, -0.006, 0, 0.073, BL2, 0.003, 0.002));                 // frente central
-    P.push(rbox(0.024, 0.009, 0.0024, -0.006, 0.01, 0.0822, DK, 0.0005, 0.001));            // janela do indicador
-    P.push(rbox(0.008, 0.005, 0.002, -0.009, 0.01, 0.0828, 0xe8e8e4, 0.0004, 0.0005));      // corrediça (desligado)
-    P.push(rbox(0.03, 0.013, 0.0012, -0.006, -0.009, 0.0822, 0xf4f4f1, 0.0003, 0.001));     // plaqueta
-    marks(P, -0.006, -0.0055, 0.0829, 0.022, 3, 0x4d5257);
-    P.push(box(0.008, 0.0035, 0.0006, -0.019, 0.0018, 0.0823, 0x0f6fb8));                   // logotipo azul
-    // bloco auxiliar lateral
-    P.push(rbox(0.017, 0.08, 0.03, 0.0255, 0, 0.015, 0x2a2b2e, 0.002, 0.002));            // pé do bloco auxiliar
-    P.push(rbox(0.0155, 0.074, 0.07, 0.0255, 0, 0.037, 0xbfc8d0, 0.003, 0.002));
-    P.push(rbox(0.0135, 0.04, 0.007, 0.0255, 0.0, 0.0735, 0xcad2d9, 0.0022, 0.0015));
-    for (let k = 0; k < 3; k++) P.push(box(0.009, 0.0008, 0.0008, 0.0255, -0.012 - k * 0.0028, 0.0742, 0x8e98a2));
-    P.push(rbox(0.011, 0.02, 0.0012, 0.0255, 0.006, 0.0742, 0xf3f3f1, 0.0003, 0.0008));
-    marks(P, 0.0255, 0.0125, 0.0749, 0.007, 5, 0x55595d, 0.0009, 0.0028);
-    for (const y of [0.028, -0.028]) { P.push(rbox(0.008, 0.008, 0.002, 0.0255, y, 0.0722, DK, 0.0004, 0.0008)); screwHead(M, 0.0255, y, 0.0727, 0.0027); }
+    for (let i = 0; i < 3; i++) {                                                           // janelas + corrediças
+      const x = -0.019 + i * 0.0125;
+      P.push(rbox(0.0098, 0.0165, 0.0016, x, -0.0012, 0.0822, 0x26282b, 0.0004, 0.0009));
+      P.push(rbox(0.0064, 0.0088, 0.0042, x, 0.0011, 0.0834, 0x5a5e64, 0.0009, 0.0009));
+      P.push(box(0.0042, 0.0007, 0.0004, x, -0.0021, 0.0857, 0x2c2e31), box(0.0042, 0.0007, 0.0004, x, 0.0042, 0.0857, 0x7a7e84));
+    }
+    // bloco auxiliar lateral (frente plana com etiqueta)
+    P.push(rbox(0.0155, 0.074, 0.066, 0.0255, 0, 0.039, 0x9fbcd9, 0.0028, 0.002));
+    P.push(box(0.0008, 0.07, 0.06, 0.0178, 0, 0.038, 0x5f7894));                           // junta com o contator
+    for (const y of [0.028, -0.028]) { P.push(rbox(0.0085, 0.0085, 0.002, 0.0255, y, 0.0722, DK, 0.0004, 0.004)); screwHead(M, 0.0255, y, 0.0727, 0.0027); }
   }, part);
 }
 
-// Temporizador digital (CTD): moldura preta chanfrada, tela recuada com vidro, faixa e 4 teclas azuis em relevo.
+// Temporizador digital CTD (foto d4320): moldura preta chanfrada, tela recuada com vidro, 4 teclas redondas azuis.
 export function ctdGeo(part = 'p') {
   return build((P, M) => {
-    P.push(rbox(0.1, 0.1, 0.007, 0, 0, 0.0035, 0x141516, 0.0015, 0.003));
-    P.push(rbox(0.092, 0.092, 0.028, 0, 0, 0.019, 0x1c1d20, 0.0025, 0.004));
-    P.push(rbox(0.07, 0.05, 0.002, 0, 0.012, 0.0335, 0x0c0d0f, 0.0006, 0.002));             // moldura da tela (rebaixo)
-    P.push(rbox(0.062, 0.042, 0.0012, 0, 0.012, 0.0338, 0x262c33, 0.0003, 0.001));          // vidro
-    P.push(box(0.06, 0.0008, 0.0004, 0, 0.032, 0.0346, 0x4a535e));                          // reflexo superior
-    P.push(rbox(0.076, 0.018, 0.0014, 0, -0.026, 0.0334, 0x1b3f8e, 0.0004, 0.002));         // faixa azul
-    for (let i = 0; i < 4; i++) {
-      const x = -0.026 + i * 0.0173;
-      P.push(rbox(0.012, 0.0095, 0.004, x, -0.026, 0.035, 0x3f74e0, 0.0012, 0.0015));
-      P.push(box(0.004, 0.0009, 0.0004, x, -0.026, 0.0372, 0xdfe8ff));
+    P.push(rbox(0.1, 0.1, 0.007, 0, 0, 0.0035, 0x121314, 0.0015, 0.003));
+    P.push(rbox(0.094, 0.094, 0.004, 0, 0, 0.009, 0x1a1b1d, 0.0015, 0.0035));                 // aba da moldura
+    P.push(rbox(0.092, 0.092, 0.026, 0, 0, 0.020, 0x18191b, 0.0022, 0.004));
+    P.push(rbox(0.066, 0.05, 0.002, 0, 0.0115, 0.0335, 0x08090a, 0.0005, 0.0015));            // moldura da tela (rebaixo)
+    P.push(rbox(0.060, 0.044, 0.0012, 0, 0.0115, 0.0338, 0x33373c, 0.0003, 0.001));           // LCD
+    P.push(box(0.058, 0.0007, 0.0004, 0, 0.0328, 0.0346, 0x4a535e));                          // reflexo superior
+    for (const x of [-0.0315, -0.0105, 0.0105, 0.0315]) {
+      P.push(cylZ(0.0058, 0.0012, 0.0337, 0x1a3c9c, 24, x, -0.0311));                         // assento
+      P.push(cylZ(0.0054, 0.0018, 0.0350, 0x3a6fe0, 24, x, -0.0311, 0.0049));                 // tecla
     }
-    P.push(cylZ(0.0013, 0.001, 0.0336, 0xd23a2a, 8, 0.03, 0.04));                           // LED
     for (const x of [-0.044, 0.044]) for (const y of [-0.044, 0.044]) screwHead(M, x, y, 0.0072, 0.0022);
   }, part);
 }
+export function ctdDecals(R) {
+  return decalGeo(R, [['ctdFace', 0, 0, 0.03305], ...[-0.0315, -0.0105, 0.0105, 0.0315].map((x, i) => ['ctdI' + i, x, -0.0311, 0.0360])]);
+}
+export function contactorDecals(R) {
+  return decalGeo(R, [['kFront', -0.006, 0, 0.0821], ['kTop', -0.006, 0.036, 0.0901], ['kBot', -0.006, -0.036, 0.0901], ['kAux', 0.0255, 0, 0.0721]]);
+}
 
-// Módulo DIN alto Altronic (RAX/RPT/RST/RCA/RYD/TCS): base preta atrás, corpo branco com cantos chanfrados, bornes de
-// parafuso em rebaixo em cima/embaixo (3 por lado), frente elevada com etiqueta, LED, potenciômetro de ajuste.
-export function tallRelayGeo(dark = false, part = 'p') {
+// Módulo DIN alto Altronic (RAX/RPT/RST/RCA/RYD) / WEG RTW-RE (TCS, corpo preto e frente clara): corpo com cantos
+// chanfrados, bornes de parafuso em rebaixo em cima/embaixo (3 por lado), frente elevada (impressões no atlas),
+// LED em cúpula e potenciômetro de ajuste só nos modelos que têm (pot).
+export function tallRelayGeo(dark = false, part = 'p', pot = true) {
   return build((P, M) => {
-    const W = dark ? 0x26272a : 0xe2e2dd, W2 = dark ? 0x2e2f32 : 0xebebe6, DK = 0x18191b;
-    P.push(rbox(0.034, 0.124, 0.03, 0.003, 0, 0.015, 0x1e1f21, 0.0012, 0.0015));
+    const W = dark ? 0x232427 : 0xe4e4df, W2 = dark ? 0xe3e3df : 0xedede8, DK = 0x18191b;
     P.push(rbox(0.031, 0.118, 0.048, 0, 0, 0.025, W, 0.0035, 0.0022));
     for (const s of [1, -1]) P.push(box(0.0009, 0.11, 0.04, s * 0.0152, 0, 0.026, dark ? 0x0e0e0f : 0xa9a9a3)); // junta das meias-carcaças
     for (const s of [1, -1]) {
@@ -240,95 +280,116 @@ export function tallRelayGeo(dark = false, part = 'p') {
         P.push(box(0.0066, 0.003, 0.004, x, s * 0.0565, 0.044, DK));                          // entrada do cabo
         screwHead(M, x, s * 0.047, 0.0494, 0.0025);
       }
-      P.push(box(0.022, 0.0016, 0.0004, 0, s * 0.0395, 0.0501, dark ? 0x9a9a9a : 0x5a5d60)); // números dos bornes
     }
     P.push(rbox(0.0285, 0.065, 0.004, 0, 0.0, 0.0495, dark ? 0x101011 : 0xb2b2ac, 0.0008, 0.0015)); // sombra do degrau frontal
     P.push(rbox(0.028, 0.062, 0.024, 0, 0.0, 0.0605, W2, 0.003, 0.002));                    // frente elevada
-    P.push(rbox(0.023, 0.028, 0.0008, 0, 0.012, 0.0727, dark ? 0xd9dbd9 : 0xf7f7f4, 0.0002, 0.0008)); // etiqueta
-    P.push(box(0.014, 0.003, 0.0005, -0.003, 0.0225, 0.0732, 0x1f4fa8));                    // marca azul
-    marks(P, 0, 0.0175, 0.0732, 0.018, 5, 0x4b4e52, 0.0008, 0.0024);
-    P.push(cylZ(0.0058, 0.001, 0.0727, 0x9fa2a4, 16, 0.003, -0.016), cylZ(0.0044, 0.0028, 0.0738, 0xb9bcbd, 16, 0.003, -0.016, 0.004));                      // potenciômetro
-    P.push(box(0.001, 0.0068, 0.0008, 0.003, -0.016, 0.0753, 0x3a3a3a));
-    P.push(cylZ(0.0016, 0.0016, 0.0732, 0xd23a2a, 8, -0.008, -0.016));                     // LED
-    P.push(box(0.022, 0.006, 0.0005, 0, -0.026, 0.0727, dark ? 0x4a4b4e : 0xd0d0cb));        // faixa inferior
+    if (pot) {
+      P.push(cylZ(0.0052, 0.001, 0.0729, 0x9fa2a4, 18, 0.003, -0.016), cylZ(0.0042, 0.003, 0.0742, 0xd4d6d6, 18, 0.003, -0.016, 0.0038));
+      P.push(box(0.0009, 0.0066, 0.0008, 0.003, -0.016, 0.0759, 0x3a3a3a));
+    }
+    P.push(cylZ(0.0017, 0.0012, 0.0729, 0x5a0d0a, 10, -0.008, -0.016));                    // LED (aro)
+    const led = new THREE.SphereGeometry(0.0013, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2); led.rotateX(Math.PI / 2); led.translate(-0.008, -0.016, 0.0733); P.push(paint(led, 0xd42a20));
   }, part);
 }
+export function relayDecals(R, v, sx, sy) {
+  return decalGeo(R, [['rf_' + v, 0, 0, 0.07265], ['rbt_' + v, 0, 0.03825 * sy, 0.0502], ['rbb_' + v, 0, -0.03825 * sy, 0.0502]], sx, sy);
+}
 
-// Disjuntor tripolar (Siemens 5SL) / DR tetrapolar. sx/sy = escala aplicada pela instância no layout (compensada aqui
-// para que parafusos e alavancas não fiquem ovais). Geometria construída na medida final.
+// Disjuntores Siemens 5SX (3 módulos unipolares lado a lado, foto d4318) / DR 5SM1 tetrapolar. sx/sy = escala aplicada
+// pela instância no layout (compensada aqui). Frente com janela REBAIXADA (moldura + fundo) onde fica a alavanca preta
+// sobre o tambor branco, etiqueta holográfica azul acima; DR com parafusos aparentes, botão de teste quadrado e
+// alavanca na janela da direita. As impressões vêm do atlas (breakerDecals).
 export function breakerNGeo(n = 3, dr = false, part = 'p', sx = 1, sy = 1) {
   return build((P, M) => {
-    const W = 0.018 * n * sx, H = 0.12 * sy, p = W / n, WH = 0xdcdbd5, WH2 = 0xe6e5e0, DK = 0x1a1b1d;
+    const W = 0.018 * n * sx, H = 0.12 * sy, p = W / n, WH = 0xe2e1db, WH2 = 0xebe9e3, DK = 0x1a1b1d, NH = 0.033 * sy, yT = 0.047 * sy;
     const px = (i) => -W / 2 + p / 2 + i * p;
-    P.push(rbox(W - 0.003, H - 0.004, 0.012, 0, 0, 0.006, 0x2f3134, 0.001, 0.0015));       // base / engate DIN
-    P.push(rbox(W, H, 0.042, 0, 0, 0.025, WH, 0.0022, 0.002));                               // corpo (z .004–.046)
-    P.push(rbox(W - 0.002, 0.066 * sy, 0.026, 0, 0, 0.058, WH2, 0.0022, 0.002));             // pescoço frontal (até .071)
-    for (const s of [1, -1]) P.push(box(W - 0.004, 0.0012, 0.0008, 0, s * 0.034 * sy, 0.0458, 0xb7b6b0)); // sombra do degrau
-    for (let i = 1; i < n; i++) {                                                            // divisões entre polos
-      const x = -W / 2 + i * p;
-      if (!dr) P.push(box(0.0008, 0.062 * sy, 0.0008, x, 0, 0.0711, 0xb3b2ac));
-      for (const s of [1, -1]) P.push(box(0.0008, 0.024 * sy, 0.0008, x, s * 0.047 * sy, 0.0461, 0xbdbcb6));
-    }
-    for (let i = 0; i < n; i++) {
-      const x = px(i);
-      for (const s of [1, -1]) {
-        const y = s * 0.047 * sy;
-        P.push(rbox(0.0115, 0.0115, 0.002, x, y, 0.0462, DK, 0.0004, 0.0009));              // rebaixo do borne
-        screwHead(M, x, y, 0.0466, 0.0037);
-        P.push(box(0.012, 0.0045, 0.012, x, s * (H / 2 - 0.0005), 0.03, 0x111214));        // entrada do cabo (topo/base)
-        P.push(box(0.0035, 0.0018, 0.0004, x, y - s * 0.0095, 0.0462, 0x5a5c5f));            // nº do borne
-      }
-    }
-    const lever = (x, w, on) => {                                                             // alavanca com volume
-      P.push(rbox(w + 0.0035, 0.03, 0.004, x, -0.002, 0.0706, DK, 0.0006, 0.0015));          // rasgo/recesso
-      const lv = rbox(w, 0.017, 0.017, x, on ? 0.004 : -0.008, 0.078, 0x161616, 0.0016, 0.0016);
-      P.push(tiltX(lv, on ? 0.38 : -0.38, x, on ? 0.004 : -0.008, 0.078));
-      P.push(tiltX(box(w * 0.18, 0.004, 0.0006, x, (on ? 0.004 : -0.008) + 0.0055, 0.0866, 0xe8e8e8), on ? 0.38 : -0.38, x, on ? 0.004 : -0.008, 0.078)); // marca I
-      for (let k = 0; k < 3; k++) {                                                          // estrias de pega
-        const g = box(w * 0.8, 0.0008, 0.0008, x, (on ? 0.004 : -0.008) + 0.004 - k * 0.003, 0.0866, 0x2c2c2c);
-        P.push(tiltX(g, on ? 0.38 : -0.38, x, on ? 0.004 : -0.008, 0.078));
-      }
+    P.push(rbox(W - 0.003, H - 0.004, 0.012, 0, 0, 0.006, 0x2f3134, 0.001, 0.0015));       // engate DIN
+    // alavanca (desligada: lábio inferior saliente) sobre tambor branco
+    const lever = (x, ww, yc, big) => {
+      P.push(cylX(big ? 0.0105 : 0.0085, ww * 0.9, x, yc, 0.0595, 0xf0efea, 20));
+      P.push(rbox(ww * 0.62, big ? 0.019 : 0.016, 0.010, x, yc + 0.002, 0.0695, 0x19191b, 0.0022, 0.002));
+      P.push(cylZ(0.0018, 0.0004, 0.0747, 0x2c2c2e, 14, x, yc + 0.0045)); P.push(cylZ(0.0012, 0.0004, 0.0749, 0x141414, 12, x, yc + 0.0045));
+      const ly = yc - (big ? 0.0135 : 0.0095);
+      P.push(tiltX(rbox(ww * 0.72, big ? 0.0085 : 0.0068, 0.0085, x, ly, 0.0735, 0x121213, 0.0012, 0.001), -0.32, x, ly, 0.0735));
+      for (let k = 0; k < 2; k++) P.push(tiltX(box(ww * 0.6, 0.0005, 0.0004, x, ly - 0.0012 + k * 0.0022, 0.0779, 0x2a2a2c), -0.32, x, ly, 0.0735));
     };
     if (!dr) {
       for (let i = 0; i < n; i++) {
-        const x = px(i);
-        lever(x, Math.min(0.011, p * 0.36), false);
-        P.push(rbox(0.009, 0.0055, 0.0012, x, 0.024 * sy, 0.0712, 0x2fa04c, 0.0003, 0.0008)); // janela verde (O)
-        P.push(box(0.008, 0.0022, 0.0004, x, -0.026 * sy, 0.0713, 0x36383b));                  // "C16"
-        P.push(box(0.005, 0.0012, 0.0004, x, -0.0295 * sy, 0.0713, 0x6a6c6f));
-        P.push(box(0.010, 0.0009, 0.0004, x, 0.0305 * sy, 0.0713, 0x6a6c6f));
+        const x = px(i), pw = p - 0.0008, ww = 0.55 * p, wT = 0.030 * sy, wB = -0.010 * sy, wp = (pw - ww) / 2;
+        P.push(rbox(pw, H, 0.042, x, 0, 0.025, WH, 0.0018, 0.0012));                          // corpo do polo (módulo separado)
+        // borne superior: furo redondo com parafuso no fundo + fenda
+        P.push(cylZ(0.0054, 0.0008, 0.0462, 0x403e3a, 22, x, yT), cylZ(0.0046, 0.0006, 0.0465, 0x262522, 20, x, yT));
+        M.push(cylZ(0.0033, 0.0012, 0.0461, 0x3a3936, 14, x, yT - 0.0006), box(0.0046, 0.0008, 0.0006, x, yT - 0.0006, 0.0467, 0x151515));
+        P.push(box(p * 0.72, 0.0005, 0.0004, x, yT - 0.0078, 0.0462, 0xa5a49e));
+        P.push(box(0.0005, 0.0045, 0.0004, x, yT - 0.0055, 0.0462, 0xa5a49e));
+        // borne inferior: abertura em "U"
+        P.push(rbox(p * 0.46, 0.0125, 0.0014, x, -H / 2 + 0.0062, 0.0459, 0x9c9b95, 0.0003, 0.0012));
+        P.push(rbox(p * 0.30, 0.0085, 0.0014, x, -H / 2 + 0.0042, 0.0462, 0x5c5b56, 0.0003, 0.001));
+        P.push(box(p * 0.62, 0.0006, 0.0004, x, -H / 2 + 0.0135, 0.0462, 0xa5a49e));
+        // frente (pescoço) com janela rebaixada
+        P.push(rbox(pw, 2 * NH, 0.019, x, 0, 0.0545, WH2, 0.0014, 0.0012));                  // fundo (até z .064)
+        P.push(rbox(ww, wT - wB, 0.0004, x, (wT + wB) / 2, 0.0641, 0xd9d8d1, 0.0001, 0.0015));
+        P.push(box(ww, 0.0028, 0.0004, x, wT - 0.0014, 0.0643, 0xb9b8b1));                    // sombra sob a moldura
+        for (const s of [-1, 1]) P.push(rbox(wp, 2 * NH, 0.0075, x + s * (ww / 2 + wp / 2), 0, 0.0672, WH2, 0.0012, 0.0008));
+        P.push(rbox(ww + 0.0006, NH - wT, 0.0075, x, (NH + wT) / 2, 0.0672, WH2, 0.0008, 0.0006));
+        P.push(rbox(ww + 0.0006, wB + NH, 0.0075, x, (wB - NH) / 2, 0.0672, WH2, 0.0012, 0.0008));
+        lever(x, ww, 0.0105 * sy, false);
+        if (i > 0) P.push(box(0.0006, H - 0.003, 0.034, x - p / 2, 0, 0.026, 0x55544f));      // fresta entre módulos
       }
-      P.push(rbox(W - p * 0.9, 0.0045, 0.004, 0, -0.016, 0.0815, 0x151515, 0.0008, 0.001));    // barra de acoplamento
-      P.push(box(0.014, 0.003, 0.0004, px(0), 0.03 * sy, 0.0713, 0x009999));                   // marca (petróleo)
     } else {
-      const xl = px(n - 1);
-      lever(xl, 0.014, false);
-      P.push(rbox(0.01, 0.006, 0.0012, xl, 0.025 * sy, 0.0712, 0x2fa04c, 0.0003, 0.0008));
-      // botão de teste "T"
-      const xt = px(n - 2);
-      P.push(cylZ(0.0075, 0.0012, 0.0712, DK, 18, xt, -0.017 * sy));
-      P.push(rbox(0.0105, 0.0105, 0.006, xt, -0.017 * sy, 0.0735, 0x9b9ea2, 0.0014, 0.002));
-      P.push(box(0.0045, 0.001, 0.0004, xt, -0.0148 * sy, 0.0767, 0x2a2a2a), box(0.001, 0.0045, 0.0004, xt, -0.0175 * sy, 0.0767, 0x2a2a2a));
-      // plaqueta de dados (esquerda)
-      const xw = (px(0) + px(1)) / 2;
-      P.push(rbox(p * 1.8, 0.044 * sy, 0.0008, xw, 0.002, 0.0712, 0xd3d4d0, 0.0002, 0.0012));
-      marks(P, xw, 0.017 * sy, 0.0717, p * 1.4, 9, 0x4a4d50, 0.0009, 0.0034 * sy);
-      P.push(box(p * 0.8, 0.003, 0.0005, xw - p * 0.4, 0.0215 * sy, 0.0717, 0x009999));
-      P.push(box(0.009, 0.0016, 0.0004, xt, 0.014 * sy, 0.0713, 0x3a3c3f), box(0.006, 0.0012, 0.0004, xt, 0.0105 * sy, 0.0713, 0x6a6c6f)); // 30 mA
+      P.push(rbox(W, H, 0.042, 0, 0, 0.025, WH, 0.0022, 0.002));
+      for (let i = 0; i < n; i++) {
+        const x = px(i);
+        P.push(cylZ(0.0058, 0.0008, 0.0462, 0x77766f, 24, x, yT), cylZ(0.0050, 0.0006, 0.0465, 0x3c3b37, 22, x, yT));
+        M.push(cylZ(0.0045, 0.0014, 0.0466, 0xb4b3ae, 18, x, yT, 0.0042));
+        M.push(box(0.0062, 0.0011, 0.0006, x, yT, 0.0474, 0x4e4e4c), box(0.0011, 0.0062, 0.0006, x, yT, 0.0474, 0x4e4e4c));
+        P.push(cylZ(0.0057, 0.0008, 0.0462, 0x8a8983, 24, x, -yT), cylZ(0.0050, 0.0006, 0.0465, 0x4a4843, 22, x, -yT));
+        M.push(cylZ(0.0038, 0.001, 0.0464, 0x6f6e68, 14, x, -yT), box(0.005, 0.0009, 0.0005, x, -yT, 0.0470, 0x2a2a2a));
+      }
+      P.push(cylZ(0.0026, 0.0008, 0.0462, 0x8a8984, 16, (px(1) + px(2)) / 2, 0.0402 * sy)); M.push(cylZ(0.0016, 0.0008, 0.0466, 0xa9a8a4, 12, (px(1) + px(2)) / 2, 0.0402 * sy));
+      P.push(cylZ(0.0012, 0.0006, 0.0462, 0x262626, 10, 0.0318, 0.0389 * sy));
+      P.push(cylZ(0.0024, 0.0008, 0.0462, 0x8a8984, 16, -0.0042, -0.0405 * sy), cylZ(0.0016, 0.0006, 0.0465, 0xdcdbd6, 12, -0.0042, -0.0405 * sy));
+      // frente: bloco impresso à esquerda + janela da alavanca à direita
+      const xL = 0.0315, xR = W / 2 - 0.0015, ww = xR - xL - 0.0005, xw = (xL + xR) / 2 - 0.0002, wT = 0.0258 * sy, wB = -0.031 * sy;
+      P.push(rbox(W - 0.002, 2 * NH, 0.019, 0, 0, 0.0545, WH2, 0.0016, 0.0012));
+      P.push(rbox(ww, wT - wB, 0.0004, xw, (wT + wB) / 2, 0.0641, 0xd6d5ce, 0.0001, 0.0015));
+      P.push(box(ww, 0.003, 0.0004, xw, wT - 0.0015, 0.0643, 0xb5b4ad));
+      P.push(rbox(xL - (-W / 2 + 0.001), 2 * NH, 0.0075, (xL + (-W / 2 + 0.001)) / 2, 0, 0.0672, WH2, 0.0012, 0.0012));
+      P.push(rbox(W / 2 - 0.001 - xR + 0.0004, 2 * NH, 0.0075, (xR + W / 2 - 0.001) / 2, 0, 0.0672, WH2, 0.0006, 0.0006));
+      P.push(rbox(ww + 0.001, NH - wT, 0.0075, xw, (NH + wT) / 2, 0.0672, WH2, 0.0008, 0.0006));
+      P.push(rbox(ww + 0.001, wB + NH, 0.0075, xw, (wB - NH) / 2, 0.0672, WH2, 0.0006, 0.0005));
+      lever(xw, ww, -0.002 * sy, true);
+      // botão de teste quadrado "T"
+      P.push(rbox(0.0168, 0.0162, 0.0016, 0.0182, -0.0247 * sy, 0.0712, 0x3a3a3a, 0.0003, 0.001));
+      P.push(rbox(0.0142, 0.0136, 0.0042, 0.0182, -0.0247 * sy, 0.0735, 0x151515, 0.0012, 0.0012));
+      P.push(box(0.0052, 0.0006, 0.0004, 0.0182, -0.0232 * sy, 0.0757, 0x2e2e2e), box(0.0006, 0.0048, 0.0004, 0.0182, -0.0252 * sy, 0.0757, 0x2e2e2e));
     }
   }, part, sx, sy);
 }
-
-// Botão de comando 22 mm: flange escura com chanfro, anel cromado, capa (instanceColor) com borda arredondada.
-export function buttonGeo() {
-  return merge([cylZ(0.0145, 0.004, 0.002, 0x232323, 28, 0, 0, 0.0138), cylZ(0.0128, 0.003, 0.0055, 0x2c2c2c, 28, 0, 0, 0.0122),
-    cylZ(0.0122, 0.0025, 0.0081, 0xb8b8b8, 28, 0, 0, 0.0115), cylZ(0.0108, 0.004, 0.0108, 0x101010, 24),
-    cylZ(0.0104, 0.0075, 0.0145, 0xffffff, 28, 0, 0, 0.0104), cylZ(0.0104, 0.0018, 0.0191, 0xf2f2f2, 28, 0, 0, 0.0094)]);
+export function breakerDecals(R, n, dr, sx, sy) {
+  const W = 0.018 * n * sx, p = W / n, it = [];
+  if (!dr) for (let i = 0; i < n; i++) { const x = -W / 2 + p / 2 + i * p; it.push(['brkHolo', x, 0.039 * sy, 0.04625], ['brkNeck', x, 0, 0.0712], ['brkWin', x, 0.0265 * sy, 0.06445]); }
+  else it.push(['drTop', 0, 0.033 * sy + 0.012, 0.04615], ['drNeck', 0, 0, 0.0712]);
+  return decalGeo(R, it, sx, sy);
 }
-// Aro de sinaleiro (a cúpula é malha emissiva separada): flange chanfrada + anel metálico.
+
+// Botão de comando 22 mm faceado (foto d4321): flange e aro pretos finos, capa colorida (instanceColor) grande e plana.
+export function buttonGeo() {
+  return merge([cylZ(0.0145, 0.004, 0.002, 0x1c1c1c, 32, 0, 0, 0.0139), cylZ(0.0138, 0.0042, 0.0061, 0x232323, 32, 0, 0, 0.0131),
+    cylZ(0.0123, 0.0058, 0.0095, 0xffffff, 32, 0, 0, 0.0119), cylZ(0.0118, 0.0012, 0.0129, 0xf6f6f6, 32, 0, 0, 0.0108)]);
+}
+// Aro de sinaleiro (a lente é malha separada): flange preta chanfrada + aro escuro.
 export function bezelGeo() {
-  return merge([cylZ(0.0145, 0.004, 0.002, 0x222222, 28, 0, 0, 0.0138), cylZ(0.013, 0.003, 0.0055, 0x2a2a2a, 28, 0, 0, 0.0124),
-    cylZ(0.0122, 0.004, 0.0088, 0xa9abad, 28, 0, 0, 0.0114)]);
+  return merge([cylZ(0.0145, 0.004, 0.002, 0x1e1e1e, 28, 0, 0, 0.0138), cylZ(0.0132, 0.0045, 0.0062, 0x262626, 28, 0, 0, 0.0124)]);
+}
+// Comutador com chave (foto d4318): corpo preto redondo, miolo cromado e chave com argola (part 'm' = metal).
+export function keySwitchGeo(part = 'p') {
+  if (part === 'm') {
+    const ring = new THREE.TorusGeometry(0.0062, 0.0008, 6, 20); ring.translate(-0.002, -0.0145, 0.019); paint(ring, 0xbdbdb8);
+    return merge([cylZ(0.0072, 0.003, 0.0185, 0xd8d8d4, 24, 0, 0, 0.0068), cylZ(0.0058, 0.0006, 0.0203, 0x8a8a86, 20),
+      box(0.0016, 0.0012, 0.004, 0, 0, 0.0215, 0x9a9a95), rbox(0.0105, 0.0088, 0.0022, 0, -0.0062, 0.0238, 0xc7b071, 0.0005, 0.003), ring]);
+  }
+  return merge([cylZ(0.0165, 0.004, 0.002, 0x1a1a1a, 32, 0, 0, 0.0158), cylZ(0.0148, 0.012, 0.010, 0x202020, 32, 0, 0, 0.0136)]);
 }
 // Chave seletora: flange chanfrada, colar, manopla preta com pega afinada e traço branco indicador.
 export function selectorGeo() {

@@ -1,7 +1,7 @@
 // DONO: agente "bancadas". Layout de cada painel didático, reproduzido a partir de refs/foto1_full.jpg (recortes).
 // Coordenadas da face em metros: x ∈ [-0.865, 0.865] (esq→dir para quem olha o painel), y ∈ [-0.465, 0.465].
 // A API "A" pinta a serigrafia no canvas e instancia as peças 3D nos mesmos pontos (ver benches.js).
-import { paintYellowBg, paintWhiteBg, paintB1Bg, rng } from './benches_tex.js?v=20261014214920';
+import { paintYellowBg, paintWhiteBg, paintB1Bg, rng } from './benches_tex.js?v=20261014221936';
 
 export const TITLES = {
   b1: 'KET-1030: Proteção', b2: 'KET 1070: Industrial', b3: 'KET-1050: Proteção', b4: 'KET-1050: Proteção', b5: 'KET-1020: Comandos Elétricos',
@@ -89,7 +89,7 @@ function b1(A) {
   A.shortWires(X(216), Y(897), [0xf0f0f0, 0xf0f0f0, 0xf0f0f0, 0xf0f0f0], 0.018);
   // RCA / RPT / FSN / RST
   const relay = (bx, by, sx, name, tops, topY, topL, mids, bots, dark, o = {}) => {
-    A.dev(dark ? 'tallD' : 'tall', X(bx), Y(by), sx, 0.92);
+    A.dev(dark ? 'tallD' : 'tall', X(bx), Y(by), sx, 0.92, name);
     // nome do relé: fonte única, à esquerda e acima do módulo (entre os fios de cima e o trilho)
     const lx = bx - 13 - 17 * sx - (o.lx || 0);
     L(name, lx, by - 36, 0.0098); L('(220Vca)', lx, by - 26, 0.009);
