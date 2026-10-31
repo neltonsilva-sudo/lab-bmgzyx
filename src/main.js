@@ -1,15 +1,15 @@
 // DONO: orquestrador. Câmera, controles (órbita / caminhar), vistas das fotos, pontos de interesse, comparação cega.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import * as L from './layout.js?v=20261015144053';
-import { createRenderer, buildLighting } from './render.js?v=20261015144053';
-import { buildRoom } from './room.js?v=20261015144053';
-import { buildBooths } from './booths.js?v=20261015144053';
-import { buildBenches } from './benches.js?v=20261015144053';
-import { buildCenter } from './center.js?v=20261015144053';
-import { buildProps } from './props.js?v=20261015144053';
-import { buildUI } from './ui.js?v=20261015144053';
-import { buildMotor3D } from './motor3d.js?v=20261015144053';
+import * as L from './layout.js?v=20261031121733';
+import { createRenderer, buildLighting } from './render.js?v=20261031121733';
+import { buildRoom } from './room.js?v=20261031121733';
+import { buildBooths } from './booths.js?v=20261031121733';
+import { buildBenches } from './benches.js?v=20261031121733';
+import { buildCenter } from './center.js?v=20261031121733';
+import { buildProps } from './props.js?v=20261031121733';
+import { buildUI } from './ui.js?v=20261031121733';
+import { buildMotor3D } from './motor3d.js?v=20261031121733';
 
 const Q = new URLSearchParams(location.search);
 const canvas = document.getElementById('c');
@@ -80,7 +80,12 @@ addEventListener('resize', resize); resize();
 
 const clock = new THREE.Clock();
 let frames = 0, acc = 0;
+/* modo econômico: limita os quadros por segundo (30; 20 parado há 1 min; 10 com a janela fora de foco) — reduz aquecimento e consumo do computador */
+let ecoLast = 0, ecoInput = performance.now(), ecoFoc = true; for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'touchstart']) addEventListener(ev, () => { ecoInput = performance.now(); ecoFoc = true; }, { passive: true });
+addEventListener('blur', () => { ecoFoc = false; }); addEventListener('focus', () => { ecoFoc = true; });   // dentro de iframe (Apps Script/Artifact) document.hasFocus() começa falso
+const ecoSkip = () => { const n = performance.now(), cap = !ecoFoc ? 10 : n - ecoInput > 60000 ? 20 : (window.__ecoMax || 30); window.__ecoCap = cap; if (n - ecoLast < 1000 / cap - 2) return true; ecoLast = n; return false; };
 function frame() {
+  if (ecoSkip()) { requestAnimationFrame(frame); return; }
   const dt = Math.min(clock.getDelta(), 0.05);
   if (tween) {
     tween.k = Math.min(1, tween.k + dt / 1.2); const e = tween.k * tween.k * (3 - 2 * tween.k);

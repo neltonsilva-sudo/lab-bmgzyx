@@ -10,11 +10,11 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { UpscaleShader } from './render_upscale.js?v=20261015144053';
+import { UpscaleShader } from './render_upscale.js?v=20261031121733';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
-import { installBoxProjection, buildEnvironment } from './render_env.js?v=20261015144053';
-import { PhoneShader } from './render_post.js?v=20261015144053';
-import { findFixtures, buildFixtureMeshes } from './render_fixtures.js?v=20261015144053';
+import { installBoxProjection, buildEnvironment } from './render_env.js?v=20261031121733';
+import { PhoneShader } from './render_post.js?v=20261031121733';
+import { findFixtures, buildFixtureMeshes } from './render_fixtures.js?v=20261031121733';
 
 const QS = new URLSearchParams(location.search);
 const QUALITY = QS.get('q') || 'high';
@@ -70,7 +70,7 @@ export function createRenderer(canvas) {
   }
   function adapt() {
     const now = performance.now(), dt = now - fps.last; fps.last = now;
-    if (forced != null || document.hidden || dt > 250) return; // ignora pausas (aba oculta, travadas pontuais)
+    if (forced != null || document.hidden || dt > 250 || (window.__ecoCap && window.__ecoCap < 50)) return; // ignora pausas e o fps limitado de propósito pelo modo econômico
     fps.n++; fps.t += dt;
     if (now < fps.next) return;
     const avg = 1000 / (fps.t / fps.n); fps.n = 0; fps.t = 0; fps.next = now + 2000;
