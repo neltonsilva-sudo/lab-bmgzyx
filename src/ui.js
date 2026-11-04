@@ -183,11 +183,34 @@ export function buildUI(o) {
     g('pHide').onclick = () => { it.obj.visible = false; const cb = it.el.querySelector('input'); cb.checked = false; select(null); };
     g('props').style.display = 'block';
   }
-  async function openLesson(id) {
-    { const a = await getAPR(); if (!a.doneToday() && !(/^(localhost|127\.)/.test(location.hostname) && o.q.get('aprok') === '1')) { toast('Antes da aula prática, preencha a APR (Análise Preliminar de Risco).', true, 5000); a.open(() => { markAPR(); openLesson(id); }); return; } }
+  // escolha ao abrir a aula: preencher a APR antes ou ir direto ao simulador
+  function askAPR(done) {
+    return new Promise((res) => {
+      const bg = document.createElement('div');
+      bg.style.cssText = 'position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(8,14,24,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif';
+      bg.innerHTML = `<div style="width:min(420px,100%);border-radius:18px;padding:22px 22px 18px;color:#fff;background:linear-gradient(160deg,rgba(255,255,255,.22),rgba(255,255,255,.08));border:1px solid rgba(255,255,255,.35);box-shadow:0 18px 50px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.4);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4)">
+        <div style="font-size:18px;font-weight:700;margin-bottom:6px">Aula Prática - Ket 1030</div>
+        <div style="font-size:14px;line-height:1.45;opacity:.92;margin-bottom:16px">Deseja preencher a <b>APR</b> (Análise Preliminar de Risco) antes de começar?${done ? '<br><span style="opacity:.8;font-size:12.5px">A APR de hoje já foi preenchida.</span>' : ''}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button data-a="sim" style="flex:1 1 150px;font:600 14.5px system-ui;padding:11px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.4);color:#fff;cursor:pointer;background:linear-gradient(180deg,rgba(64,170,110,.85),rgba(36,120,76,.85))">Sim, preencher APR</button>
+          <button data-a="nao" style="flex:1 1 150px;font:600 14.5px system-ui;padding:11px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.4);color:#fff;cursor:pointer;background:rgba(255,255,255,.14)">Não, abrir simulador</button>
+        </div>
+        <div style="text-align:center;margin-top:12px"><button data-a="x" style="background:none;border:0;color:#fff;opacity:.75;font:13px system-ui;cursor:pointer;text-decoration:underline">Cancelar</button></div></div>`;
+      const end = (v) => { bg.remove(); removeEventListener('keydown', key); res(v); };
+      const key = (e) => { if (e.key === 'Escape') end('x'); };
+      bg.addEventListener('click', (e) => { const b = e.target.closest('[data-a]'); if (b) end(b.dataset.a); else if (e.target === bg) end('x'); });
+      addEventListener('keydown', key); document.body.appendChild(bg);
+    });
+  }
+  async function openLesson(id, skipAsk) {
+    if (!skipAsk && !(/^(localhost|127\.)/.test(location.hostname) && o.q.get('aprok') === '1')) {
+      const a = await getAPR(), r = await askAPR(a.doneToday());
+      if (r === 'x') return;
+      if (r === 'sim') { a.open(() => { markAPR(); openLesson(id, true); }); return; }
+    }
     if (!lesson) {
       let mod;
-      try { mod = await import('./lesson.js?v=20261031121733'); } catch (e) { console.error(e); toast('Não foi possível abrir a aula prática agora (módulo em atualização). Tente de novo em instantes.', true, 6000); return; }
+      try { mod = await import('./lesson.js?v=20261104160231'); } catch (e) { console.error(e); toast('Não foi possível abrir a aula prática agora (módulo em atualização). Tente de novo em instantes.', true, 6000); return; }
       lesson = mod.buildLesson({ THREE, L, camera, controls, canvas, scene, parts, setCam, render, toast, ui: { setWalk: (v) => { if (walking !== v) toggleWalk(); } } });
     }
     if (walking) toggleWalk();
@@ -419,7 +442,7 @@ export function buildUI(o) {
   // ---------- mapa de riscos (NR-5) ----------
   let risk = null, riskOn = false;
   async function setRisk(on) {
-    if (on && !risk) { const m = await import('./riskmap.js?v=20261031121733'); risk = m.buildRiskMap({ THREE, L, scene }); g('riskLeg').innerHTML = risk.legendHTML(); }
+    if (on && !risk) { const m = await import('./riskmap.js?v=20261104160231'); risk = m.buildRiskMap({ THREE, L, scene }); g('riskLeg').innerHTML = risk.legendHTML(); }
     riskOn = on; if (risk) risk.setVisible(on); setOn('tRisk', on); g('bRisk').classList.toggle('on', on); g('riskLeg').style.display = on ? 'block' : 'none';
     try { localStorage.setItem('labtwin.riscos', on ? '1' : '0'); } catch (e) {}
   }
@@ -427,7 +450,7 @@ export function buildUI(o) {
 
   // ---------- APR (Análise Preliminar de Risco) ----------
   let apr = null;
-  const getAPR = async () => { if (!apr) { const [a, r] = await Promise.all([import('./apr.js?v=20261031121733'), import('./riskmap.js?v=20261031121733')]); apr = a.buildAPR({ toast, riskAreas: r.riskAreas(L) }); } return apr; };
+  const getAPR = async () => { if (!apr) { const [a, r] = await Promise.all([import('./apr.js?v=20261104160231'), import('./riskmap.js?v=20261104160231')]); apr = a.buildAPR({ toast, riskAreas: r.riskAreas(L) }); } return apr; };
   const markAPR = () => { const a = apr && apr.last(); g('bAPR').classList.toggle('done', !!a); g('bAPR').querySelector('small').textContent = a ? 'preenchida ✓' : 'preencher antes'; };
   g('bAPR').onclick = async () => { (await getAPR()).open(markAPR); };
   getAPR().then(markAPR).catch(() => {});
@@ -441,14 +464,14 @@ export function buildUI(o) {
   const isPhone = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) < 820);
   let vr = null;
   async function startVR() {
-    if (!vr) { const m = await import('./vr.js?v=20261031121733'); vr = m.buildVR({ THREE, L, camera, controls, scene, render, toast, overlay: () => (risk && riskOn ? risk.scene : null) }); }
+    if (!vr) { const m = await import('./vr.js?v=20261104160231'); vr = m.buildVR({ THREE, L, camera, controls, scene, render, toast, overlay: () => (risk && riskOn ? risk.scene : null) }); }
     if (walking) toggleWalk(); if (multi) g('tMulti').click(); if (lesson && lesson.isOpen()) lesson.close();
     g('vrQR').style.display = 'none'; select(null);
     await vr.enter();
   }
   // sessão professor → celulares (QR code): fechar a página do professor ou clicar em Encerrar bloqueia os celulares
   let sess = null, sid = null;
-  const ensureSession = async () => { if (sid && sess && !sess.closed) return sid; const m = await import('./session.js?v=20261031121733'); sid = m.newSessionId(); sess = m.hostSession(sid); return sid; };
+  const ensureSession = async () => { if (sid && sess && !sess.closed) return sid; const m = await import('./session.js?v=20261104160231'); sid = m.newSessionId(); sess = m.hostSession(sid); return sid; };
   const inClaudeHost = /claude|anthropic/i.test(location.hostname);
   function lockPhone(why) {
     try { if (vr && vr.active) vr.exit(); } catch (e) {}
@@ -464,7 +487,7 @@ export function buildUI(o) {
   if (o.q.get('vr') === '1' && !inClaudeHost) {
     const s0 = o.q.get('s');
     if (!s0) lockPhone('old');
-    else import('./session.js?v=20261031121733').then(async (m) => {
+    else import('./session.js?v=20261104160231').then(async (m) => {
       const st = await m.checkSession(s0);
       if (st === 'closed' || st === 'expired') lockPhone(st); else m.watchSession(s0, lockPhone);
     }).catch(() => {});
