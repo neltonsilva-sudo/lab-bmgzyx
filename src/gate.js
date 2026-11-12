@@ -7,6 +7,9 @@ const KEY = 'labtwin.acesso';
 const sha = async (t) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map((b) => b.toString(16).padStart(2, '0')).join('');
 const start = () => import('./main.js?v=20261104160231');
 let ok = /^(localhost|127\.)/.test(location.hostname) && !new URLSearchParams(location.search).has('gate');
+// quem chega pelo card da Central de Treinamentos entra direto (o link direto continua pedindo a senha)
+const CENTRAL = location.origin + '/central-treinamentos/';
+if (!ok && document.referrer.startsWith(CENTRAL)) ok = true;
 // pede a senha a cada abertura ou recarga da página (nada fica guardado no navegador)
 
 if (ok) start();
