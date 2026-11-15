@@ -5,7 +5,7 @@ const HASH = '894eb8f7765e28c1f245b91adedbcb06cc85353e9a1594b1e7813be2cfad9f17';
 const KEY = 'labtwin.acesso';
 
 const sha = async (t) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map((b) => b.toString(16).padStart(2, '0')).join('');
-const start = () => import('./main.js?v=20261104160231');
+const start = () => import('./main.js?v=20261115121543');
 let ok = /^(localhost|127\.)/.test(location.hostname) && !new URLSearchParams(location.search).has('gate');
 // quem chega pelo card da Central de Treinamentos entra direto (o link direto continua pedindo a senha)
 const CENTRAL = location.origin + '/central-treinamentos/';
@@ -24,7 +24,7 @@ else {
   #gate .err{color:#c9261a;font-size:13px;min-height:18px;margin-top:6px}`;
   document.head.appendChild(css);
   const g = document.createElement('div'); g.id = 'gate';
-  g.innerHTML = `<form autocomplete="off"><h1>Gêmeo Digital · Laboratório de Eletricidade</h1><p>Acesso restrito à turma. Digite a senha informada pelo professor.</p>
+  g.innerHTML = `<form autocomplete="off"><h1>Simulador · Laboratório de Eletricidade</h1><p>Acesso restrito à turma. Digite a senha informada pelo professor.</p>
     <input type="password" id="gPw" placeholder="Senha de acesso" autofocus><button>Entrar</button><div class="err" id="gErr"></div></form>`;
   document.body.appendChild(g);
   g.querySelector('form').onsubmit = async (e) => {

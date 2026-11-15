@@ -113,7 +113,7 @@ export function buildUI(o) {
   };
   const btn = (id, ic, tip, badge = '') => `<button id="${id}" data-tip="${tip}"><svg viewBox="0 0 24 24">${I[ic]}</svg>${badge ? `<b>${badge}</b>` : ''}</button>`;
   document.body.append(
-    $(`<div id="ttl" class="pn">Gêmeo Digital · Laboratório de Eletricidade<small>Réplica 3D em escala real · NR-10</small></div>`),
+    $(`<div id="ttl" class="pn">Simulador · Laboratório de Eletricidade<small>Réplica 3D em escala real · NR-10</small></div>`),
     $(`<div id="tb" class="pn">${btn('tAula', 'aula', 'Aula Prática - Ket 1030: abrir painel funcional')}<span class="sep"></span>${btn('tFit', 'fit', 'Visão geral (enquadrar tudo)')}${btn('tF1', 'cam', 'Vista da foto 1', '1')}${btn('tF2', 'cam', 'Vista da foto 2', '2')}${btn('tF3', 'cam', 'Vista da foto 3', '3')}<span class="sep"></span>
       ${btn('tWalk', 'walk', 'Caminhar (W A S D)')}<span class="sep"></span>${btn('tTree', 'tree', 'Navegador de objetos')}${btn('tTag', 'tag', 'Rótulos')}<span class="sep"></span>
       ${btn('tRisk', 'risk', 'Mapa de riscos (NR-5)')}${btn('tZone', 'zone', 'Zonas NR-10 (risco e controlada)')}${btn('tMove', 'move', 'Mover ou retirar cadeiras')}${btn('tMeas', 'meas', 'Medir distância')}${btn('tCut', 'cut', 'Corte: remover o teto')}<span class="sep"></span>
@@ -210,7 +210,7 @@ export function buildUI(o) {
     }
     if (!lesson) {
       let mod;
-      try { mod = await import('./lesson.js?v=20261104160231'); } catch (e) { console.error(e); toast('Não foi possível abrir a aula prática agora (módulo em atualização). Tente de novo em instantes.', true, 6000); return; }
+      try { mod = await import('./lesson.js?v=20261115121543'); } catch (e) { console.error(e); toast('Não foi possível abrir a aula prática agora (módulo em atualização). Tente de novo em instantes.', true, 6000); return; }
       lesson = mod.buildLesson({ THREE, L, camera, controls, canvas, scene, parts, setCam, render, toast, ui: { setWalk: (v) => { if (walking !== v) toggleWalk(); } } });
     }
     if (walking) toggleWalk();
@@ -426,8 +426,8 @@ export function buildUI(o) {
     const vd = cmp.querySelector('.verd');
     cmp.querySelectorAll('[data-p]').forEach((b) => b.onclick = () => {
       const real = swap ? 0 : 1, ok = +b.dataset.p === real, ver = verdicts[name];
-      vd.innerHTML = `${ok ? 'Acertou' : 'Errou'}: a foto real é <b>${'AB'[real]}</b>; o gêmeo digital é <b>${'AB'[1 - real]}</b>.` +
-        (ver ? `<br>Inspetor independente: melhor aparência = <b>${ver.vencedor}</b> · nota do gêmeo ${ver.nota}/10 — ${ver.frase}` : '');
+      vd.innerHTML = `${ok ? 'Acertou' : 'Errou'}: a foto real é <b>${'AB'[real]}</b>; o simulador é <b>${'AB'[1 - real]}</b>.` +
+        (ver ? `<br>Inspetor independente: melhor aparência = <b>${ver.vencedor}</b> · nota do simulador ${ver.nota}/10 — ${ver.frase}` : '');
     });
     cmp.querySelector('[data-n]').onclick = () => openCompare(n % 3 + 1);
     cmp.querySelector('[data-x]').onclick = () => { cmp.style.display = 'none'; };
@@ -442,7 +442,7 @@ export function buildUI(o) {
   // ---------- mapa de riscos (NR-5) ----------
   let risk = null, riskOn = false;
   async function setRisk(on) {
-    if (on && !risk) { const m = await import('./riskmap.js?v=20261104160231'); risk = m.buildRiskMap({ THREE, L, scene }); g('riskLeg').innerHTML = risk.legendHTML(); }
+    if (on && !risk) { const m = await import('./riskmap.js?v=20261115121543'); risk = m.buildRiskMap({ THREE, L, scene }); g('riskLeg').innerHTML = risk.legendHTML(); }
     riskOn = on; if (risk) risk.setVisible(on); setOn('tRisk', on); g('bRisk').classList.toggle('on', on); g('riskLeg').style.display = on ? 'block' : 'none';
     try { localStorage.setItem('labtwin.riscos', on ? '1' : '0'); } catch (e) {}
   }
@@ -450,7 +450,7 @@ export function buildUI(o) {
 
   // ---------- APR (Análise Preliminar de Risco) ----------
   let apr = null;
-  const getAPR = async () => { if (!apr) { const [a, r] = await Promise.all([import('./apr.js?v=20261104160231'), import('./riskmap.js?v=20261104160231')]); apr = a.buildAPR({ toast, riskAreas: r.riskAreas(L) }); } return apr; };
+  const getAPR = async () => { if (!apr) { const [a, r] = await Promise.all([import('./apr.js?v=20261115121543'), import('./riskmap.js?v=20261115121543')]); apr = a.buildAPR({ toast, riskAreas: r.riskAreas(L) }); } return apr; };
   const markAPR = () => { const a = apr && apr.last(); g('bAPR').classList.toggle('done', !!a); g('bAPR').querySelector('small').textContent = a ? 'preenchida ✓' : 'preencher antes'; };
   g('bAPR').onclick = async () => { (await getAPR()).open(markAPR); };
   getAPR().then(markAPR).catch(() => {});
@@ -464,14 +464,14 @@ export function buildUI(o) {
   const isPhone = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) < 820);
   let vr = null;
   async function startVR() {
-    if (!vr) { const m = await import('./vr.js?v=20261104160231'); vr = m.buildVR({ THREE, L, camera, controls, scene, render, toast, overlay: () => (risk && riskOn ? risk.scene : null) }); }
+    if (!vr) { const m = await import('./vr.js?v=20261115121543'); vr = m.buildVR({ THREE, L, camera, controls, scene, render, toast, overlay: () => (risk && riskOn ? risk.scene : null) }); }
     if (walking) toggleWalk(); if (multi) g('tMulti').click(); if (lesson && lesson.isOpen()) lesson.close();
     g('vrQR').style.display = 'none'; select(null);
     await vr.enter();
   }
   // sessão professor → celulares (QR code): fechar a página do professor ou clicar em Encerrar bloqueia os celulares
   let sess = null, sid = null;
-  const ensureSession = async () => { if (sid && sess && !sess.closed) return sid; const m = await import('./session.js?v=20261104160231'); sid = m.newSessionId(); sess = m.hostSession(sid); return sid; };
+  const ensureSession = async () => { if (sid && sess && !sess.closed) return sid; const m = await import('./session.js?v=20261115121543'); sid = m.newSessionId(); sess = m.hostSession(sid); return sid; };
   const inClaudeHost = /claude|anthropic/i.test(location.hostname);
   function lockPhone(why) {
     try { if (vr && vr.active) vr.exit(); } catch (e) {}
@@ -487,7 +487,7 @@ export function buildUI(o) {
   if (o.q.get('vr') === '1' && !inClaudeHost) {
     const s0 = o.q.get('s');
     if (!s0) lockPhone('old');
-    else import('./session.js?v=20261104160231').then(async (m) => {
+    else import('./session.js?v=20261115121543').then(async (m) => {
       const st = await m.checkSession(s0);
       if (st === 'closed' || st === 'expired') lockPhone(st); else m.watchSession(s0, lockPhone);
     }).catch(() => {});
